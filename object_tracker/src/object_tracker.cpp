@@ -274,14 +274,9 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     }
   }
 
-  // Visualize victim covariance in rviz
-  drawings.setTime(percept->header.stamp);
-  drawings.addMarker(object->getVisualization());
-  drawings.setColor(1.0, 0.0, 0.0, 1.0);
-  drawings.drawCovariance(Eigen::Vector2f(position.x(), position.y()), covariance.block<2,2>(0,0));
-  drawings.sendAndResetData();
-
   modelUpdatePublisher.publish(object->getObjectMessage());
+
+  publishModel();
 }
 
 bool ObjectTracker::setObjectStateCb(worldmodel_msgs::SetObjectState::Request& request, worldmodel_msgs::SetObjectState::Response& response) {
@@ -297,6 +292,7 @@ bool ObjectTracker::setObjectStateCb(worldmodel_msgs::SetObjectState::Request& r
   modelUpdatePublisher.publish(object->getObjectMessage());
 
   model.unlock();
+  publishModel();
   return true;
 }
 
@@ -354,6 +350,8 @@ bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, wo
   modelUpdatePublisher.publish(response.object);
 
   model.unlock();
+
+  publishModel();
   return true;
 }
 
@@ -426,8 +424,22 @@ bool ObjectTracker::transformPose(const geometry_msgs::PoseWithCovariance& from,
   return true;
 }
 
-void ObjectTracker::publishModel() const {
+void ObjectTracker::publishModel() {
+  // Publish all model data on topic /objects
   modelPublisher.publish(model.getObjectModelMessage());
+
+  // Visualize victims and covariance in rviz
+  drawings.setTime(ros::Time::now());
+  drawings.setColor(1.0, 0.0, 0.0, 1.0);
+
+  model.lock();
+  for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
+    ObjectPtr object = *it;
+    drawings.addMarker(object->getVisualization());
+    drawings.drawCovariance(Eigen::Vector2f(object->getPosition().x(), object->getPosition().y()), object->getCovariance().block<2,2>(0,0));
+  }
+  model.unlock();
+  drawings.sendAndResetData();
 }
 
 } // namespace object_tracker

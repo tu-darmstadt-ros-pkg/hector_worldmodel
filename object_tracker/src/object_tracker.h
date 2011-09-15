@@ -36,7 +36,7 @@ public:
   ObjectModel& getModel()             { return model; }
   const ObjectModel& getModel() const { return model; }
 
-  void publishModel() const;
+  void publishModel();
 
 protected:
   bool transformPose(const geometry_msgs::Pose& from, geometry_msgs::Pose &to, std_msgs::Header &header, tf::StampedTransform *transform = 0);
