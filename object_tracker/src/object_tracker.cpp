@@ -88,19 +88,20 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   posePercept->header = percept->header;
   posePercept->info = percept->info;
 
+  // retrieve distance information
+  float distance = percept->distance > 0.0 ? percept->distance : _default_distance;
+
   // transform Point using the camera model
   if (cameraModels.count(percept->header.frame_id) == 0) {
     cameraModels[percept->header.frame_id].fromCameraInfo(percept->camera_info);
   }
   const image_geometry::PinholeCameraModel& cameraModel = cameraModels[percept->header.frame_id];
   cv::Point3d direction_cv = cameraModel.projectPixelTo3dRay(cv::Point2d(percept->x + percept->width/2, percept->y + percept->height/2));
-  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * _default_distance);
+  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
   tf::Quaternion direction(-direction_cv.x/direction_cv.z, direction_cv.y/direction_cv.z, 0.0);
   pose.setBasis(btMatrix3x3(direction));
 
-  // retrieve distance information
-  float distance = pose.getOrigin().length();
-  if (_project_objects) {
+  if (percept->distance == 0.0 && _project_objects) {
     hector_nav_msgs::GetDistanceToObstacle::Request request;
     hector_nav_msgs::GetDistanceToObstacle::Response response;
 
