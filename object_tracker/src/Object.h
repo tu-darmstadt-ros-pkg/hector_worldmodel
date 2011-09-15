@@ -3,7 +3,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <worldmodel_msgs/Object.h>
-#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include <Eigen/Geometry>
 
@@ -31,7 +31,7 @@ public:
       return object;
     }
 
-    visualization_msgs::Marker getVisualization() const;
+    void getVisualization(visualization_msgs::MarkerArray &markers) const;
 
     const geometry_msgs::PoseWithCovariance& getPoseWithCovariance() const { return object.pose; }
     void setPose(const geometry_msgs::PoseWithCovariance& pose) { object.pose = pose; }
@@ -84,6 +84,7 @@ public:
       object.header = header;
     }
 
+    void intersect(const Eigen::Vector3f& position, const Eigen::Matrix3f& covariance, float support);
     void update(const Eigen::Vector3f& position, const Eigen::Matrix3f& covariance, float support);
 
     static void setNamespace(const std::string& ns);

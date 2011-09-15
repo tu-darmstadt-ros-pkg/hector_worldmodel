@@ -466,16 +466,18 @@ void ObjectTracker::publishModel() {
   modelPublisher.publish(model.getObjectModelMessage());
 
   // Visualize victims and covariance in rviz
-  drawings.setTime(ros::Time::now());
-  drawings.setColor(1.0, 0.0, 0.0, 1.0);
-
-  model.lock();
-  for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
-    ObjectPtr object = *it;
-    drawings.addMarker(object->getVisualization());
-    drawings.drawCovariance(Eigen::Vector2f(object->getPosition().x(), object->getPosition().y()), object->getCovariance().block<2,2>(0,0));
-  }
-  model.unlock();
+  visualization_msgs::MarkerArray markers;
+  model.getVisualization(markers);
+//  drawings.setTime(ros::Time::now());
+//  model.lock();
+//  for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
+//    ObjectPtr object = *it;
+//    drawings.addMarkers(object->getVisualization());
+//    drawings.setColor(1.0, 0.0, 0.0, drawings.markerArray.markers.back().color.a);
+//    drawings.drawCovariance(Eigen::Vector2f(object->getPosition().x(), object->getPosition().y()), object->getCovariance().block<2,2>(0,0));
+//  }
+//  model.unlock();
+  drawings.addMarkers(markers);
   drawings.sendAndResetData();
 }
 

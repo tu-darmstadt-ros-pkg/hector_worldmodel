@@ -61,7 +61,7 @@ void Object::setCovariance(const Eigen::Matrix3f& covariance) {
   object.pose.covariance[14] = covariance(2,2);
 }
 
-void Object::update(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& covarianceB, float support) {
+void Object::intersect(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& covarianceB, float support) {
   // old cov/covariance is A , new cov/covIn is B
   float omega = 0.5f;
 
@@ -76,21 +76,44 @@ void Object::update(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& cov
   addSupport(support);
 }
 
-visualization_msgs::Marker Object::getVisualization() const {
-  visualization_msgs::Marker marker;
+void Object::update(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& covarianceB, float support) {
+  Eigen::Matrix3f A(covariance.inverse());
+  Eigen::Matrix3f B(covarianceB.inverse());
 
+  covariance = (A + B).inverse();
+  position = covariance * (A * position + B * positionB);
+
+  setPosition(position);
+  setCovariance(covariance);
+  addSupport(support);
+}
+
+void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
+  visualization_msgs::Marker marker;
   marker.header = object.header;
-  marker.action = marker.ADD;
+
+  marker.action = visualization_msgs::Marker::ADD;
   marker.pose = object.pose.pose;
   marker.ns = "worldmodel";
-  marker.type = marker.SPHERE;
+  marker.type = visualization_msgs::Marker::SPHERE;
   marker.scale.x = 0.1;
   marker.scale.y = 0.1;
   marker.scale.z = 0.1;
   marker.color.b = 1.0;
   marker.color.a = std::max(0.0, std::min(1.0, object.info.support / 20.0));
+  markers.markers.push_back(marker);
 
-  return marker;
+  marker.header = object.header;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose = object.pose.pose;
+  marker.ns = "worldmodel";
+  marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+  marker.text = !object.info.name.empty() ? object.info.name : object.info.object_id;
+  marker.scale.x = 0.0;
+  marker.scale.y = 0.0;
+  marker.scale.z = 0.1;
+  marker.pose.position.z += 1.5 * marker.scale.z;
+  markers.markers.push_back(marker);
 }
 
 void Object::setNamespace(const std::string &ns) {

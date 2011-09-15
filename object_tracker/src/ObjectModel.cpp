@@ -81,9 +81,8 @@ void ObjectModel::getVisualization(visualization_msgs::MarkerArray &markers) con
   boost::recursive_mutex::scoped_lock lock(objectsMutex);
 
   markers.markers.clear();
-  markers.markers.reserve(objects.size());
   for(ObjectList::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-    markers.markers.push_back((*it)->getVisualization());
+    (*it)->getVisualization(markers);
   }
 }
 
