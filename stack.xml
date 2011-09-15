@@ -1,0 +1,9 @@
+<stack>
+  <description brief="hector_worldmodel">hector_worldmodel</description>
+  <author>Team Hector Darmstadt</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://code.google.com/p/tu-darmstadt-ros-pkg/wiki/hector_worldmodel</url>
+  <depend stack="ros" />
+
+</stack>

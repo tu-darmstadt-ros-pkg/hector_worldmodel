@@ -1,0 +1,24 @@
+<package>
+  <description brief="object_tracker">
+
+     object_tracker
+
+  </description>
+  <author>Team Hector Darmstadt</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/object_tracker</url>
+
+  <depend package="roscpp" />
+  <depend package="tf" />
+  <depend package="tf_conversions" />
+  <depend package="eigen" />
+  <depend package="image_geometry" />
+
+  <depend package="worldmodel_msgs" />
+  <depend package="hector_nav_msgs" />
+  <depend package="hector_marker_drawing" />
+
+</package>
+
+
