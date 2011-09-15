@@ -83,12 +83,12 @@ visualization_msgs::Marker Object::getVisualization() const {
   marker.action = marker.ADD;
   marker.pose = object.pose.pose;
   marker.ns = "worldmodel";
-  marker.type = marker.ARROW;
-  marker.scale.x = 1.0;
-  marker.scale.y = 1.0;
-  marker.scale.z = 1.0;
+  marker.type = marker.SPHERE;
+  marker.scale.x = 0.1;
+  marker.scale.y = 0.1;
+  marker.scale.z = 0.1;
   marker.color.b = 1.0;
-  marker.color.a = 1.0;
+  marker.color.a = std::max(0.0, std::min(1.0, object.info.support / 20.0));
 
   return marker;
 }

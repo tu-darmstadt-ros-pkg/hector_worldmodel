@@ -83,37 +83,23 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
 void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &percept)
 {
   worldmodel_msgs::PosePerceptPtr posePercept(new worldmodel_msgs::PosePercept);
+  tf::Pose pose;
 
   posePercept->header = percept->header;
   posePercept->info = percept->info;
 
-  // get camera model
+  // transform Point using the camera model
   if (cameraModels.count(percept->header.frame_id) == 0) {
     cameraModels[percept->header.frame_id].fromCameraInfo(percept->camera_info);
   }
   const image_geometry::PinholeCameraModel& cameraModel = cameraModels[percept->header.frame_id];
   cv::Point3d direction_cv = cameraModel.projectPixelTo3dRay(cv::Point2d(percept->x + percept->width/2, percept->y + percept->height/2));
-  tf::Point direction_tf(direction_cv.z, -direction_cv.x, -direction_cv.y);
-  tf::Quaternion direction_quaternion(direction_tf.y()/direction_tf.x(), -direction_tf.z()/direction_tf.x(), 0.0);
-
-  // fill posePercept from direction vector
-  tf::pointTFToMsg(direction_tf.normalized() * _default_distance, posePercept->pose.pose.position);
-  tf::quaternionTFToMsg(direction_quaternion, posePercept->pose.pose.orientation);
-
-  // forward to posePercept callback
-  posePerceptCb(posePercept);
-}
-
-void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &percept)
-{
-  // convert pose in tf
-  tf::Pose pose;
-  tf::poseMsgToTF(percept->pose.pose, pose);
-  tf::Quaternion direction(pose.getOrigin().y()/pose.getOrigin().x(), -pose.getOrigin().z()/pose.getOrigin().x(), 0.0);
+  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * _default_distance);
+  tf::Quaternion direction(-direction_cv.x/direction_cv.z, direction_cv.y/direction_cv.z, 0.0);
+  pose.setBasis(btMatrix3x3(direction));
 
   // retrieve distance information
   float distance = pose.getOrigin().length();
-
   if (_project_objects) {
     hector_nav_msgs::GetDistanceToObstacle::Request request;
     hector_nav_msgs::GetDistanceToObstacle::Response response;
@@ -132,6 +118,59 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     }
   }
 
+  // set variance
+  Eigen::Matrix3f covariance;
+  covariance(0,0) = _distance_variance;
+  covariance(1,1) = std::max(distance*distance, 1.0f) * _angle_variance;
+  covariance(2,2) = covariance(1,1);
+
+  // rotate covariance matrix depending on the position in the image
+  Eigen::Matrix3f rotation_camera_object(Eigen::Quaternionf(direction.w(), direction.x(), direction.y(), direction.z()).matrix());
+  covariance = rotation_camera_object * covariance * rotation_camera_object.transpose();
+
+  // fill posePercept
+  tf::poseTFToMsg(pose, posePercept->pose.pose);
+  // tf::quaternionTFToMsg(direction, posePercept->pose.pose.orientation);
+  posePercept->pose.covariance[0]  = covariance(0,0);
+  posePercept->pose.covariance[1]  = covariance(0,1);
+  posePercept->pose.covariance[2]  = covariance(0,2);
+  posePercept->pose.covariance[6]  = covariance(1,0);
+  posePercept->pose.covariance[7]  = covariance(1,1);
+  posePercept->pose.covariance[8]  = covariance(1,2);
+  posePercept->pose.covariance[12] = covariance(2,0);
+  posePercept->pose.covariance[13] = covariance(2,1);
+  posePercept->pose.covariance[14] = covariance(2,2);
+
+  // forward to posePercept callback
+  posePerceptCb(posePercept);
+}
+
+void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &percept)
+{
+  // convert pose in tf
+  tf::Pose pose;
+  tf::poseMsgToTF(percept->pose.pose, pose);
+
+  // retrieve distance information
+//  float distance = pose.getOrigin().length();
+//  if (_project_objects) {
+//    hector_nav_msgs::GetDistanceToObstacle::Request request;
+//    hector_nav_msgs::GetDistanceToObstacle::Response response;
+
+//    // project image percept to the next obstacle
+//    request.point.header = percept->header;
+//    tf::pointTFToMsg(pose.getOrigin(), request.point.point);
+//    if (distanceToObstacle.call(request, response) && response.distance > 0.0) {
+//      // distance = std::max(response.distance - 0.1f, 0.0f);
+//      distance = std::max(response.distance, 0.0f);
+//      pose.setOrigin(pose.getOrigin().normalized() * distance);
+//      ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
+//    } else {
+//      ROS_DEBUG("Ignoring percept due to unknown or infinite distance");
+//      return;
+//    }
+//  }
+
   // extract variance matrix
   Eigen::Matrix<float,6,6> temp;
   for(unsigned int i = 0; i < 36; ++i) temp(i) = percept->pose.covariance[i];
@@ -140,17 +179,15 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   // if no variance is given, set variance to default
   if (covariance.isZero()) {
     covariance(0,0) = _distance_variance;
-    covariance(1,1) = std::max(distance*distance, 1.0f) * _angle_variance;
-    covariance(2,2) = covariance(1,1);
+    covariance(1,1) = _distance_variance;
+    covariance(2,2) = _distance_variance;
   }
-
-  // rotate covariance matrix depending on the position in the image
-  Eigen::Matrix3f rotation_camera_object(Eigen::Quaternionf(direction.w(), direction.x(), direction.y(), direction.z()).matrix());
-  covariance = rotation_camera_object * covariance * rotation_camera_object.transpose();
 
   // project percept coordinates to map frame
   tf::StampedTransform cameraTransform;
-  if (!_frame_id.empty() && percept->header.frame_id != _frame_id) {
+  if (!_frame_id.empty() && tf.resolve(percept->header.frame_id) != tf.resolve(_frame_id)) {
+    ROS_DEBUG("Transforming percept from %s frame to %s frame", percept->header.frame_id.c_str(), _frame_id.c_str());
+
     // retrieve camera transformation from tf
     try {
       tf.waitForTransform(_frame_id, percept->header.frame_id, percept->header.stamp, ros::Duration(1.0));
