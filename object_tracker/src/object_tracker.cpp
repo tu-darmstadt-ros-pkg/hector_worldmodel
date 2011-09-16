@@ -91,11 +91,18 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   // retrieve distance information
   float distance = percept->distance > 0.0 ? percept->distance : _default_distance;
 
-  // transform Point using the camera model
+  // retrieve camera model from either the cache or from CameraInfo given in the percept
   if (cameraModels.count(percept->header.frame_id) == 0) {
-    cameraModels[percept->header.frame_id].fromCameraInfo(percept->camera_info);
+    image_geometry::PinholeCameraModel cameraModel;
+    if (!cameraModel.fromCameraInfo(percept->camera_info)) {
+      ROS_ERROR("Could not initialize camera model from CameraInfo given in the percept");
+      return;
+    }
+    cameraModels[percept->header.frame_id] = cameraModel;
   }
   const image_geometry::PinholeCameraModel& cameraModel = cameraModels[percept->header.frame_id];
+
+  // transform Point using the camera model
   cv::Point3d direction_cv = cameraModel.projectPixelTo3dRay(cv::Point2d(percept->x + percept->width/2, percept->y + percept->height/2));
   pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
   tf::Quaternion direction(-direction_cv.x/direction_cv.z, direction_cv.y/direction_cv.z, 0.0);
