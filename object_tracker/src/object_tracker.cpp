@@ -115,13 +115,18 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
     // project image percept to the next obstacle
     request.point.header = percept->header;
     tf::pointTFToMsg(pose.getOrigin(), request.point.point);
-    if (distanceToObstacle.call(request, response) && response.distance > 0.0) {
-      // distance = std::max(response.distance - 0.1f, 0.0f);
-      distance = std::max(response.distance, 0.0f);
-      pose.setOrigin(pose.getOrigin().normalized() * distance);
-      ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
+    if (distanceToObstacle.call(request, response)) {
+      if (response.distance > 0.0) {
+        // distance = std::max(response.distance - 0.1f, 0.0f);
+        distance = std::max(response.distance, 0.0f);
+        pose.setOrigin(pose.getOrigin().normalized() * distance);
+        ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
+      } else {
+        ROS_DEBUG("Ignoring percept due to unknown or infinite distance: %s returned %f", distanceToObstacle.getService().c_str(), response.distance);
+        return;
+      }
     } else {
-      ROS_DEBUG("Ignoring percept due to unknown or infinite distance");
+      ROS_DEBUG("Ignoring percept due to unknown or infinite distance: %s failed", distanceToObstacle.getService().c_str());
       return;
     }
   }
