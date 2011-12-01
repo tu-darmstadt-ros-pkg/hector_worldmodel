@@ -85,6 +85,8 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   worldmodel_msgs::PosePerceptPtr posePercept(new worldmodel_msgs::PosePercept);
   tf::Pose pose;
 
+  ROS_DEBUG("Incoming image percept with image coordinates [%f,%f] in frame %s", percept->x, percept->y, percept->header.frame_id.c_str());
+
   posePercept->header = percept->header;
   posePercept->info = percept->info;
 
@@ -108,6 +110,9 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   tf::Quaternion direction(-direction_cv.x/direction_cv.z, direction_cv.y/direction_cv.z, 0.0);
   pose.setBasis(btMatrix3x3(direction));
 
+  ROS_DEBUG("Projected image percept to [%f,%f,%f] in cv", direction_cv.x, direction_cv.y, direction_cv.z);
+  ROS_DEBUG("Projected image percept to [%f,%f,%f] in tf", pose.getOrigin().x(), pose.getOrigin().y(),pose.getOrigin().z());
+
   if (percept->distance == 0.0 && _project_objects) {
     hector_nav_msgs::GetDistanceToObstacle::Request request;
     hector_nav_msgs::GetDistanceToObstacle::Response response;
@@ -122,11 +127,11 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
         pose.setOrigin(pose.getOrigin().normalized() * distance);
         ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
       } else {
-        ROS_DEBUG("Ignoring percept due to unknown or infinite distance: %s returned %f", distanceToObstacle.getService().c_str(), response.distance);
+        ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s returned %f", distanceToObstacle.getService().c_str(), response.distance);
         return;
       }
     } else {
-      ROS_DEBUG("Ignoring percept due to unknown or infinite distance: %s failed", distanceToObstacle.getService().c_str());
+      ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s failed", distanceToObstacle.getService().c_str());
       return;
     }
   }
