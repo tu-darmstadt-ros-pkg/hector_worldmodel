@@ -51,7 +51,7 @@ private:
 
   ros::Publisher modelPublisher;
   ros::Publisher modelUpdatePublisher;
-  ros::Publisher visualizationPublisher;
+  ros::Publisher poseDebugPublisher;
 
   ros::ServiceClient distanceToObstacle;
   ros::ServiceServer setObjectState;
@@ -64,7 +64,8 @@ private:
   HectorDrawings drawings;
 
   ObjectModel model;
-  std::map<std::string,image_geometry::PinholeCameraModel> cameraModels;
+  typedef boost::shared_ptr<image_geometry::PinholeCameraModel> CameraModelPtr;
+  std::map<std::string,CameraModelPtr> cameraModels;
 
   bool _project_objects;
   std::string _frame_id;

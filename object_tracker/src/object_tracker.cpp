@@ -15,8 +15,7 @@
 namespace object_tracker {
 
 ObjectTracker::ObjectTracker()
-  : nh("worldmodel")
-  , _project_objects(false)
+  : _project_objects(false)
   , _frame_id("map")
   , _default_distance(1.0)
   , _distance_variance(1.0)
@@ -24,9 +23,7 @@ ObjectTracker::ObjectTracker()
   , _min_height(-999.9)
   , _max_height(999.9)
 {
-  ros::NodeHandle global_nh;
-  sysCommandSubscriber = global_nh.subscribe("syscommand", 10, &ObjectTracker::sysCommandCb, this);
-
+  sysCommandSubscriber = nh.subscribe("syscommand", 10, &ObjectTracker::sysCommandCb, this);
   imagePerceptSubscriber = nh.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = nh.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
   modelPublisher = nh.advertise<worldmodel_msgs::ObjectModel>("objects", 10, false);
@@ -43,13 +40,15 @@ ObjectTracker::ObjectTracker()
   priv_nh.getParam("min_height", _min_height);
   priv_nh.getParam("max_height", _max_height);
 
+  poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
+
   std::string verification_services_str;
   priv_nh.getParam("verfication_services", verification_services_str);
   std::vector<std::string> verification_services;
   boost::algorithm::split(verification_services, verification_services_str, boost::is_any_of(","));
   for(std::vector<std::string>::iterator it = verification_services.begin(); it != verification_services.end(); ++it) {
     if (it->empty()) continue;
-    verificationServices.push_back(global_nh.serviceClient<worldmodel_msgs::VerifyObject>(*it));
+    verificationServices.push_back(nh.serviceClient<worldmodel_msgs::VerifyObject>(*it));
     if (verificationServices.back().exists()) {
       ROS_INFO("Using verification service %s", it->c_str());
     } else {
@@ -57,7 +56,7 @@ ObjectTracker::ObjectTracker()
     }
   }
 
-  distanceToObstacle = global_nh.serviceClient<hector_nav_msgs::GetDistanceToObstacle>("get_distance_to_obstacle", true);
+  distanceToObstacle = nh.serviceClient<hector_nav_msgs::GetDistanceToObstacle>("get_distance_to_obstacle", true);
   if (_project_objects && !distanceToObstacle.waitForExistence(ros::Duration(5.0))) {
     ROS_WARN("_project_objects is true, but GetDistanceToObstacle service is not (yet) available");
   }
@@ -66,7 +65,7 @@ ObjectTracker::ObjectTracker()
   addObject = nh.advertiseService("add_object", &ObjectTracker::addObjectCb, this);
   getObjectModel = nh.advertiseService("get_object_model", &ObjectTracker::getObjectModelCb, this);
 
-  drawings.setNamespace("worldmodel");
+  drawings.setNamespace(nh.getNamespace());
 }
 
 ObjectTracker::~ObjectTracker()
@@ -94,24 +93,28 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   float distance = percept->distance > 0.0 ? percept->distance : _default_distance;
 
   // retrieve camera model from either the cache or from CameraInfo given in the percept
+  CameraModelPtr cameraModel;
   if (cameraModels.count(percept->header.frame_id) == 0) {
-    image_geometry::PinholeCameraModel cameraModel;
-    if (!cameraModel.fromCameraInfo(percept->camera_info)) {
+    cameraModel.reset(new image_geometry::PinholeCameraModel());
+    if (!cameraModel->fromCameraInfo(percept->camera_info)) {
       ROS_ERROR("Could not initialize camera model from CameraInfo given in the percept");
       return;
     }
     cameraModels[percept->header.frame_id] = cameraModel;
+  } else {
+    cameraModel = cameraModels[percept->header.frame_id];
   }
-  const image_geometry::PinholeCameraModel& cameraModel = cameraModels[percept->header.frame_id];
 
-  // transform Point using the camera model
-  cv::Point3d direction_cv = cameraModel.projectPixelTo3dRay(cv::Point2d(percept->x + percept->width/2, percept->y + percept->height/2));
+  // transform Point using the camera mode
+  cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(percept->x, percept->y));
+  cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
   pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
   tf::Quaternion direction(-direction_cv.x/direction_cv.z, direction_cv.y/direction_cv.z, 0.0);
   pose.setBasis(btMatrix3x3(direction));
 
-  ROS_DEBUG("Projected image percept to [%f,%f,%f] in cv", direction_cv.x, direction_cv.y, direction_cv.z);
-  ROS_DEBUG("Projected image percept to [%f,%f,%f] in tf", pose.getOrigin().x(), pose.getOrigin().y(),pose.getOrigin().z());
+  ROS_DEBUG("--> Rectified image coordinates: [%f,%f]", rectified.x, rectified.y);
+  ROS_DEBUG("--> Projected 3D ray (OpenCV):   [%f,%f,%f]", direction_cv.x, direction_cv.y, direction_cv.z);
+  ROS_DEBUG("--> Projected 3D ray (tf):       [%f,%f,%f]", pose.getOrigin().x(), pose.getOrigin().y(),pose.getOrigin().z());
 
   if (percept->distance == 0.0 && _project_objects) {
     hector_nav_msgs::GetDistanceToObstacle::Request request;
@@ -165,6 +168,14 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
 
 void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &percept)
 {
+  // publish pose in source frame for debugging purposes
+  if (poseDebugPublisher.getNumSubscribers() > 0) {
+    geometry_msgs::PoseStamped pose;
+    pose.pose = percept->pose.pose;
+    pose.header = percept->header;
+    poseDebugPublisher.publish(pose);
+  }
+
   // convert pose in tf
   tf::Pose pose;
   tf::poseMsgToTF(percept->pose.pose, pose);
