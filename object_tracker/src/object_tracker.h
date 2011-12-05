@@ -52,6 +52,7 @@ private:
   ros::Publisher modelPublisher;
   ros::Publisher modelUpdatePublisher;
   ros::Publisher poseDebugPublisher;
+  ros::Publisher pointDebugPublisher;
 
   ros::ServiceClient distanceToObstacle;
   ros::ServiceServer setObjectState;
@@ -69,6 +70,7 @@ private:
 
   bool _project_objects;
   std::string _frame_id;
+  std::string _worldmodel_ns;
   double _default_distance;
   double _distance_variance;
   double _angle_variance;

@@ -15,32 +15,29 @@
 namespace object_tracker {
 
 ObjectTracker::ObjectTracker()
-  : _project_objects(false)
-  , _frame_id("map")
-  , _default_distance(1.0)
-  , _distance_variance(1.0)
-  , _angle_variance(5.0 * M_PI / 180.0)
-  , _min_height(-999.9)
-  , _max_height(999.9)
 {
-  sysCommandSubscriber = nh.subscribe("syscommand", 10, &ObjectTracker::sysCommandCb, this);
-  imagePerceptSubscriber = nh.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
-  posePerceptSubscriber = nh.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
-  modelPublisher = nh.advertise<worldmodel_msgs::ObjectModel>("objects", 10, false);
-  modelUpdatePublisher = nh.advertise<worldmodel_msgs::Object>("object", 10, false);
-
-  Object::setNamespace(nh.getNamespace());
-
   ros::NodeHandle priv_nh("~");
-  priv_nh.getParam("project_objects", _project_objects);
-  priv_nh.getParam("frame_id", _frame_id);
-  priv_nh.getParam("default_distance", _default_distance);
-  priv_nh.getParam("distance_variance", _distance_variance);
-  priv_nh.getParam("angle_variance", _angle_variance);
-  priv_nh.getParam("min_height", _min_height);
-  priv_nh.getParam("max_height", _max_height);
+  priv_nh.param("project_objects", _project_objects, false);
+  priv_nh.param("frame_id", _frame_id, std::string("map"));
+  priv_nh.param("worldmodel_ns", _worldmodel_ns, std::string("worldmodel"));
+  priv_nh.param("default_distance", _default_distance, 1.0);
+  priv_nh.param("distance_variance", _distance_variance, 1.0);
+  priv_nh.param("angle_variance", _angle_variance, 5.0 * M_PI / 180.0);
+  priv_nh.param("min_height", _min_height, -999.9);
+  priv_nh.param("max_height", _max_height, 999.9);
 
+  ros::NodeHandle worldmodel(_worldmodel_ns);
+  imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
+  posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
+  modelPublisher = worldmodel.advertise<worldmodel_msgs::ObjectModel>("objects", 10, false);
+  modelUpdatePublisher = worldmodel.advertise<worldmodel_msgs::Object>("object", 10, false);
+
+  Object::setNamespace(_worldmodel_ns);
+  drawings.setNamespace(_worldmodel_ns);
+
+  sysCommandSubscriber = nh.subscribe("syscommand", 10, &ObjectTracker::sysCommandCb, this);
   poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
+  pointDebugPublisher = priv_nh.advertise<geometry_msgs::PointStamped>("point", 10, false);
 
   std::string verification_services_str;
   priv_nh.getParam("verfication_services", verification_services_str);
@@ -61,11 +58,9 @@ ObjectTracker::ObjectTracker()
     ROS_WARN("_project_objects is true, but GetDistanceToObstacle service is not (yet) available");
   }
 
-  setObjectState = nh.advertiseService("set_object_state", &ObjectTracker::setObjectStateCb, this);
-  addObject = nh.advertiseService("add_object", &ObjectTracker::addObjectCb, this);
-  getObjectModel = nh.advertiseService("get_object_model", &ObjectTracker::getObjectModelCb, this);
-
-  drawings.setNamespace(nh.getNamespace());
+  setObjectState = worldmodel.advertiseService("set_object_state", &ObjectTracker::setObjectStateCb, this);
+  addObject = worldmodel.advertiseService("add_object", &ObjectTracker::addObjectCb, this);
+  getObjectModel = worldmodel.advertiseService("get_object_model", &ObjectTracker::getObjectModelCb, this);
 }
 
 ObjectTracker::~ObjectTracker()
@@ -174,6 +169,12 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     pose.pose = percept->pose.pose;
     pose.header = percept->header;
     poseDebugPublisher.publish(pose);
+  }
+  if (pointDebugPublisher.getNumSubscribers() > 0) {
+    geometry_msgs::PointStamped point;
+    point.point = percept->pose.pose.position;
+    point.header = percept->header;
+    pointDebugPublisher.publish(point);
   }
 
   // convert pose in tf
@@ -340,8 +341,15 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     }
   }
 
-  modelUpdatePublisher.publish(object->getObjectMessage());
+  // publish point in target frame for debugging purposes
+  if (pointDebugPublisher.getNumSubscribers() > 0) {
+    geometry_msgs::PointStamped point;
+    point.point = object->getPose().position;
+    point.header = object->getHeader();
+    pointDebugPublisher.publish(point);
+  }
 
+  modelUpdatePublisher.publish(object->getObjectMessage());
   publishModel();
 }
 
