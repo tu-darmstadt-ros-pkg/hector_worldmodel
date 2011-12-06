@@ -297,7 +297,8 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
   // or update existing object
   } else if (support > 0.0) {
-    object->update(position, covariance, support);
+    //object->update(position, covariance, support);
+    object->intersect(position, covariance, support);
 
   // or simply decrease support
   } else {
