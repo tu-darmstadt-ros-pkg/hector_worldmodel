@@ -140,15 +140,11 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   covariance(1,1) = std::max(distance*distance, 1.0f) * _angle_variance;
   covariance(2,2) = covariance(1,1);
 
-  std::cout << "Object frame covariance: " << covariance << std::endl;
-
   // rotate covariance matrix depending on the position in the image
   Eigen::Quaterniond eigen_rotation;
   tf::RotationTFToEigen(direction, eigen_rotation);
   Eigen::Matrix3f rotation_camera_object(eigen_rotation.toRotationMatrix().cast<float>());
   covariance = rotation_camera_object * covariance * rotation_camera_object.transpose();
-
-  std::cout << "Camera frame covariance: " << covariance << std::endl;
 
   // fill posePercept
   tf::poseTFToMsg(pose, posePercept->pose.pose);
