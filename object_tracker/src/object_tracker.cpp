@@ -21,8 +21,8 @@ ObjectTracker::ObjectTracker()
   priv_nh.param("frame_id", _frame_id, std::string("map"));
   priv_nh.param("worldmodel_ns", _worldmodel_ns, std::string("worldmodel"));
   priv_nh.param("default_distance", _default_distance, 1.0);
-  priv_nh.param("distance_variance", _distance_variance, 1.0);
-  priv_nh.param("angle_variance", _angle_variance, 5.0 * M_PI / 180.0);
+  priv_nh.param("distance_variance", _distance_variance, pow(1.0, 2));
+  priv_nh.param("angle_variance", _angle_variance, pow(5.0 * M_PI / 180.0, 2));
   priv_nh.param("min_height", _min_height, -999.9);
   priv_nh.param("max_height", _max_height, 999.9);
 
@@ -53,7 +53,7 @@ ObjectTracker::ObjectTracker()
     }
   }
 
-  distanceToObstacle = nh.serviceClient<hector_nav_msgs::GetDistanceToObstacle>("get_distance_to_obstacle", true);
+  distanceToObstacle = nh.serviceClient<hector_nav_msgs::GetDistanceToObstacle>("get_distance_to_obstacle");
   if (_project_objects && !distanceToObstacle.waitForExistence(ros::Duration(5.0))) {
     ROS_WARN("_project_objects is true, but GetDistanceToObstacle service is not (yet) available");
   }
