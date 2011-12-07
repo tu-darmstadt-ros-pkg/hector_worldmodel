@@ -104,7 +104,7 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(percept->x, percept->y));
   cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
   pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
-  tf::Quaternion direction(-direction_cv.x/direction_cv.z, direction_cv.y/direction_cv.z, 0.0);
+  tf::Quaternion direction(-direction_cv.x / direction_cv.z, direction_cv.y / sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x), 0.0);
   pose.setBasis(btMatrix3x3(direction));
 
   ROS_DEBUG("--> Rectified image coordinates: [%f,%f]", rectified.x, rectified.y);
