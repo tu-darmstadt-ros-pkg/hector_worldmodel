@@ -172,12 +172,6 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     pose.header = percept->header;
     poseDebugPublisher.publish(pose);
   }
-  if (pointDebugPublisher.getNumSubscribers() > 0) {
-    geometry_msgs::PointStamped point;
-    point.point = percept->pose.pose.position;
-    point.header = percept->header;
-    pointDebugPublisher.publish(point);
-  }
 
   // convert pose in tf
   tf::Pose pose;
