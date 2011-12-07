@@ -22,7 +22,7 @@ ObjectTracker::ObjectTracker()
   priv_nh.param("worldmodel_ns", _worldmodel_ns, std::string("worldmodel"));
   priv_nh.param("default_distance", _default_distance, 1.0);
   priv_nh.param("distance_variance", _distance_variance, pow(1.0, 2));
-  priv_nh.param("angle_variance", _angle_variance, pow(5.0 * M_PI / 180.0, 2));
+  priv_nh.param("angle_variance", _angle_variance, pow(10.0 * M_PI / 180.0, 2));
   priv_nh.param("min_height", _min_height, -999.9);
   priv_nh.param("max_height", _max_height, 999.9);
 
@@ -137,7 +137,7 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   // set variance
   Eigen::Matrix3f covariance(Eigen::Matrix3f::Zero());
   covariance(0,0) = _distance_variance;
-  covariance(1,1) = std::max(distance*distance, 1.0f) * _angle_variance;
+  covariance(1,1) = std::max(distance*distance, 1.0f) * tan(_angle_variance);
   covariance(2,2) = covariance(1,1);
 
   // rotate covariance matrix depending on the position in the image
