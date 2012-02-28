@@ -104,10 +104,12 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(percept->x, percept->y));
   cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
 //  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
-//  tf::Quaternion direction(atan(-direction_cv.x / direction_cv.z), atan(direction_cv.y / sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
+//  tf::Quaternion direction(atan2(-direction_cv.x, direction_cv.z), atan2(direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
   pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized() * distance);
-  tf::Quaternion direction(0.0, atan(direction_cv.x / direction_cv.z), atan(-direction_cv.y / sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)));
-  pose.setBasis(btMatrix3x3(direction));
+  tf::Quaternion direction;
+  direction.setEuler(atan2(direction_cv.x, direction_cv.z), atan2(-direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
+  direction = direction * tf::Quaternion(0.5, -0.5, 0.5, 0.5);
+  pose.getBasis().setRotation(direction);
 
   ROS_DEBUG("--> Rectified image coordinates: [%f,%f]", rectified.x, rectified.y);
   ROS_DEBUG("--> Projected 3D ray (OpenCV):   [%f,%f,%f]", direction_cv.x, direction_cv.y, direction_cv.z);
@@ -138,9 +140,9 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
 
   // set variance
   Eigen::Matrix3f covariance(Eigen::Matrix3f::Zero());
-  covariance(0,0) = _distance_variance;
-  covariance(1,1) = std::max(distance*distance, 1.0f) * tan(_angle_variance);
-  covariance(2,2) = covariance(1,1);
+  covariance(0,0) = std::max(distance*distance, 1.0f) * tan(_angle_variance);
+  covariance(1,1) = covariance(0,0);
+  covariance(2,2) = _distance_variance;
 
   // rotate covariance matrix depending on the position in the image
   Eigen::Quaterniond eigen_rotation;

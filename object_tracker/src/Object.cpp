@@ -90,23 +90,26 @@ void Object::update(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& cov
 
 void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   visualization_msgs::Marker marker;
-  marker.header = object.header;
 
+  marker.header = object.header;
   marker.action = visualization_msgs::Marker::ADD;
   marker.pose = object.pose.pose;
   marker.ns = "worldmodel";
+  marker.color.r = 1.0;
+  marker.color.a = std::max(0.0, std::min(1.0, object.info.support / 20.0));
+
+  marker.type = visualization_msgs::Marker::ARROW;
+  marker.scale.x = 1.0;
+  marker.scale.y = 1.0;
+  marker.scale.z = 1.0;
+  // markers.markers.push_back(marker);
+
   marker.type = visualization_msgs::Marker::SPHERE;
   marker.scale.x = 0.1;
   marker.scale.y = 0.1;
   marker.scale.z = 0.1;
-  marker.color.b = 1.0;
-  marker.color.a = std::max(0.0, std::min(1.0, object.info.support / 20.0));
   markers.markers.push_back(marker);
 
-  marker.header = object.header;
-  marker.action = visualization_msgs::Marker::ADD;
-  marker.pose = object.pose.pose;
-  marker.ns = "worldmodel";
   marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
   marker.text = !object.info.name.empty() ? object.info.name : object.info.object_id;
   marker.scale.x = 0.0;
