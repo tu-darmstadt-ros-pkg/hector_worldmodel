@@ -103,8 +103,10 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   // transform Point using the camera mode
   cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(percept->x, percept->y));
   cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
-  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
-  tf::Quaternion direction(-direction_cv.x / direction_cv.z, direction_cv.y / sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x), 0.0);
+//  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
+//  tf::Quaternion direction(atan(-direction_cv.x / direction_cv.z), atan(direction_cv.y / sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
+  pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized() * distance);
+  tf::Quaternion direction(0.0, atan(direction_cv.x / direction_cv.z), atan(-direction_cv.y / sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)));
   pose.setBasis(btMatrix3x3(direction));
 
   ROS_DEBUG("--> Rectified image coordinates: [%f,%f]", rectified.x, rectified.y);
