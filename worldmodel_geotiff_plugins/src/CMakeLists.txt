@@ -1,0 +1,1 @@
+rosbuild_add_library(worldmodel_geotiff_plugins worldmodel_geotiff_plugins.cpp)

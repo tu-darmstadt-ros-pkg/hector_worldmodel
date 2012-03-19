@@ -1,0 +1,7 @@
+<library path="lib/libworldmodel_geotiff_plugin">
+  <class name="worldmodel_geotiff_plugin/VictimMapWriter" type="worldmodel_geotiff_plugin::VictimMapWriter" base_class_type="hector_geotiff::MapWriterPluginInterface">
+  <description>
+  This is a MapWriter plugin that draws objects from the worldmodel in the map.
+  </description>
+  </class>
+</library>

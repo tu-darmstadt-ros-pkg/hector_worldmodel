@@ -1,0 +1,21 @@
+<package>
+  <description brief="worldmodel_geotiff_plugins">
+
+     worldmodel_geotiff_plugins
+
+  </description>
+  <author>Johannes Meyer</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/worldmodel_geotiff_plugins</url>
+
+  <depend package="hector_geotiff"/>
+  <depend package="worldmodel_msgs"/>
+
+  <export>
+    <hector_geotiff plugin="${prefix}/hector_geotiff_plugins.xml" />
+  </export>
+
+</package>
+
+
