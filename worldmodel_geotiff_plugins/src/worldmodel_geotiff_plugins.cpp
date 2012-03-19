@@ -41,7 +41,8 @@ using namespace hector_geotiff;
 class VictimMapWriter : public MapWriterPluginInterface
 {
 public:
-  virtual ~VictimMapWriter() {}
+  VictimMapWriter();
+  virtual ~VictimMapWriter();
 
   virtual void initialize(const std::string& name);
   virtual void draw(MapWriterInterface *interface);
@@ -50,9 +51,18 @@ private:
   ros::NodeHandle nh_;
   ros::ServiceClient service_client_;
 
+  bool initialized_;
+  std::string name_;
   bool draw_all_objects_;
   std::string class_id_;
 };
+
+VictimMapWriter::VictimMapWriter()
+  : initialized_(false)
+{}
+
+VictimMapWriter::~VictimMapWriter()
+{}
 
 void VictimMapWriter::initialize(const std::string& name)
 {
@@ -64,14 +74,19 @@ void VictimMapWriter::initialize(const std::string& name)
   plugin_nh.param("class_id", class_id_, std::string());
 
   service_client_ = nh_.serviceClient<worldmodel_msgs::GetObjectModel>(service_name_);
+
+  initialized_ = true;
+  this->name_ = name;
+  ROS_INFO_NAMED(name_, "Successfully initialized hector_geotiff MapWriter plugin %s.", name_.c_str());
 }
 
 void VictimMapWriter::draw(MapWriterInterface *interface)
 {
-  worldmodel_msgs::GetObjectModel data;
+  if (!initialized_) return;
 
+  worldmodel_msgs::GetObjectModel data;
   if (!service_client_.call(data)) {
-    ROS_ERROR_NAMED("VictimMapWriter", "Cannot draw victims, service %s failed", service_client_.getService().c_str());
+    ROS_ERROR_NAMED(name_, "Cannot draw victims, service %s failed", service_client_.getService().c_str());
     return;
   }
 
