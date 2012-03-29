@@ -327,6 +327,8 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
         min_distance = distance;
       }
     }
+  } else {
+    object = model.getObject(percept->info.object_id);
   }
 
   if (object && object->getState() < 0) {
