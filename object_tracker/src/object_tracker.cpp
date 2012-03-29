@@ -213,11 +213,11 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     for(std::vector<ros::ServiceClient>::iterator it = services.begin(); it != services.end(); ++it) {
       if (it->call(request, response)) {
         if (response.response == response.DISCARD) {
-          ROS_INFO("Discarded percept of class '%s' due to DISCARD message from service %s", percept->info.class_id.c_str(), it->getService().c_str());
+          ROS_DEBUG("Discarded percept of class '%s' due to DISCARD message from service %s", percept->info.class_id.c_str(), it->getService().c_str());
           return;
         }
         if (response.response == response.CONFIRM) {
-          ROS_INFO("We got a CONFIRMation for percept of class '%s' from service %s!", percept->info.class_id.c_str(), it->getService().c_str());
+          ROS_DEBUG("We got a CONFIRMation for percept of class '%s' from service %s!", percept->info.class_id.c_str(), it->getService().c_str());
           support_added_by_percept_verification = 100.0;
         }
         if (response.response == response.UNKNOWN) {
@@ -383,15 +383,15 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     for(std::vector<ros::ServiceClient>::iterator it = services.begin(); it != services.end(); ++it) {
       if (it->call(request, response)) {
         if (response.response == response.DISCARD) {
-          ROS_INFO("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->getService().c_str());
+          ROS_DEBUG("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->getService().c_str());
           object->setState(worldmodel_msgs::ObjectState::DISCARDED);
         }
         if (response.response == response.CONFIRM) {
-          ROS_INFO("We got a CONFIRMation for object %s from service %s!", object->getObjectId().c_str(), it->getService().c_str());
+          ROS_DEBUG("We got a CONFIRMation for object %s from service %s!", object->getObjectId().c_str(), it->getService().c_str());
           object->addSupport(100.0);
         }
         if (response.response == response.UNKNOWN) {
-          ROS_INFO("Verification service %s cannot help us with object %s at the moment :-(", it->getService().c_str(), object->getObjectId().c_str());
+          ROS_DEBUG("Verification service %s cannot help us with object %s at the moment :-(", it->getService().c_str(), object->getObjectId().c_str());
         }
       }
     }

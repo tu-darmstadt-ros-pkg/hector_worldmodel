@@ -38,16 +38,16 @@ namespace worldmodel_geotiff_plugins {
 
 using namespace hector_geotiff;
 
-class VictimMapWriter : public MapWriterPluginInterface
+class MapWriterPlugin : public MapWriterPluginInterface
 {
 public:
-  VictimMapWriter();
-  virtual ~VictimMapWriter();
+  MapWriterPlugin();
+  virtual ~MapWriterPlugin();
 
   virtual void initialize(const std::string& name);
-  virtual void draw(MapWriterInterface *interface);
+  virtual void draw(MapWriterInterface *interface) = 0;
 
-private:
+protected:
   ros::NodeHandle nh_;
   ros::ServiceClient service_client_;
 
@@ -57,14 +57,14 @@ private:
   std::string class_id_;
 };
 
-VictimMapWriter::VictimMapWriter()
+MapWriterPlugin::MapWriterPlugin()
   : initialized_(false)
 {}
 
-VictimMapWriter::~VictimMapWriter()
+MapWriterPlugin::~MapWriterPlugin()
 {}
 
-void VictimMapWriter::initialize(const std::string& name)
+void MapWriterPlugin::initialize(const std::string& name)
 {
   ros::NodeHandle plugin_nh("~/" + name);
   std::string service_name_;
@@ -80,31 +80,68 @@ void VictimMapWriter::initialize(const std::string& name)
   ROS_INFO_NAMED(name_, "Successfully initialized hector_geotiff MapWriter plugin %s.", name_.c_str());
 }
 
-void VictimMapWriter::draw(MapWriterInterface *interface)
+class VictimMapWriter : public MapWriterPlugin
 {
-  if (!initialized_) return;
+public:
+  virtual ~VictimMapWriter() {}
 
-  worldmodel_msgs::GetObjectModel data;
-  if (!service_client_.call(data)) {
-    ROS_ERROR_NAMED(name_, "Cannot draw victims, service %s failed", service_client_.getService().c_str());
-    return;
+  void draw(MapWriterInterface *interface)
+  {
+    if (!initialized_) return;
+
+    worldmodel_msgs::GetObjectModel data;
+    if (!service_client_.call(data)) {
+      ROS_ERROR_NAMED(name_, "Cannot draw victims, service %s failed", service_client_.getService().c_str());
+      return;
+    }
+
+    int counter = 0;
+    for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
+      const worldmodel_msgs::Object& object = *it;
+      if (!draw_all_objects_ && object.state.state != worldmodel_msgs::ObjectState::CONFIRMED) continue;
+      if (!class_id_.empty() && object.info.class_id != class_id_) continue;
+
+      Eigen::Vector2f coords;
+      coords.x() = object.pose.pose.position.x;
+      coords.y() = object.pose.pose.position.y;
+      interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(240,10,10));
+    }
   }
+};
 
-  int counter = 0;
-  for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
-    const worldmodel_msgs::Object& object = *it;
-    if (!draw_all_objects_ && object.state.state != worldmodel_msgs::ObjectState::CONFIRMED) continue;
-    if (!class_id_.empty() && object.info.class_id != class_id_) continue;
+class QRCodeMapWriter : public MapWriterPlugin
+{
+public:
+  virtual ~QRCodeMapWriter() {}
 
-    Eigen::Vector2f coords;
-    coords.x() = object.pose.pose.position.x;
-    coords.y() = object.pose.pose.position.y;
-    interface->drawVictim(coords, ++counter);
+  void draw(MapWriterInterface *interface)
+  {
+    if (!initialized_) return;
+
+    worldmodel_msgs::GetObjectModel data;
+    if (!service_client_.call(data)) {
+      ROS_ERROR_NAMED(name_, "Cannot draw victims, service %s failed", service_client_.getService().c_str());
+      return;
+    }
+
+    int counter = 0;
+    for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
+      const worldmodel_msgs::Object& object = *it;
+      if (!draw_all_objects_ && object.state.state != worldmodel_msgs::ObjectState::CONFIRMED) continue;
+      if (!class_id_.empty() && object.info.class_id != class_id_) continue;
+
+      Eigen::Vector2f coords;
+      coords.x() = object.pose.pose.position.x;
+      coords.y() = object.pose.pose.position.y;
+      interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(10,10,240));
+    }
   }
-}
+};
 
 } // namespace
 
 //register this planner as a MapWriterPluginInterface plugin
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_DECLARE_CLASS(worldmodel_geotiff_plugins, VictimMapWriter, worldmodel_geotiff_plugins::VictimMapWriter, hector_geotiff::MapWriterPluginInterface)
+PLUGINLIB_DECLARE_CLASS(worldmodel_geotiff_plugins, QRCodeMapWriter, worldmodel_geotiff_plugins::QRCodeMapWriter, hector_geotiff::MapWriterPluginInterface)
+
