@@ -2,6 +2,7 @@
 
 #include <hector_nav_msgs/GetDistanceToObstacle.h>
 #include <worldmodel_msgs/VerifyObject.h>
+#include <worldmodel_msgs/VerifyPercept.h>
 
 #include <Eigen/Geometry>
 #include <math.h>
@@ -39,17 +40,36 @@ ObjectTracker::ObjectTracker()
   poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
   pointDebugPublisher = priv_nh.advertise<geometry_msgs::PointStamped>("point", 10, false);
 
-  std::string verification_services_str;
-  priv_nh.getParam("verfication_services", verification_services_str);
-  std::vector<std::string> verification_services;
-  boost::algorithm::split(verification_services, verification_services_str, boost::is_any_of(","));
-  for(std::vector<std::string>::iterator it = verification_services.begin(); it != verification_services.end(); ++it) {
-    if (it->empty()) continue;
-    verificationServices.push_back(nh.serviceClient<worldmodel_msgs::VerifyObject>(*it));
-    if (verificationServices.back().exists()) {
-      ROS_INFO("Using verification service %s", it->c_str());
-    } else {
-      ROS_WARN("Verification service %s is not (yet) there...", it->c_str());
+  XmlRpc::XmlRpcValue verification_services;
+  if (priv_nh.getParam("verification_services", verification_services) && verification_services.getType() == XmlRpc::XmlRpcValue::TypeArray) {
+    for(int i = 0; i < verification_services.size(); ++i) {
+      XmlRpc::XmlRpcValue item = verification_services[i];
+      if (!item.hasMember("service")) {
+        ROS_ERROR("Verification service %d could not be intialized: unknown service name", i);
+        continue;
+      }
+      if (!item.hasMember("type")) {
+        ROS_ERROR("Verification service %d could not be intialized: unknown service type", i);
+        continue;
+      }
+
+      ros::ServiceClient client;
+      if (item["type"] == "object") {
+        client = nh.serviceClient<worldmodel_msgs::VerifyObject>(item["service"]);
+      } else if (item["type"] == "percept") {
+        client = nh.serviceClient<worldmodel_msgs::VerifyPercept>(item["service"]);
+      }
+
+      if (!client.isValid()) continue;
+      if (!client.exists()) ROS_WARN("Verification service %s is not (yet) there...", client.getService().c_str());
+
+      if (item.hasMember("class_id")) {
+        verificationServices[item["type"]][item["class_id"]].push_back(client);
+        ROS_INFO("Using %s verification service %s for objects of class %s", std::string(item["type"]).c_str(), client.getService().c_str(), std::string(item["class_id"]).c_str());
+      } else {
+        verificationServices[item["type"]]["*"].push_back(client);
+        ROS_INFO("Using %s verification service %s", std::string(item["type"]).c_str(), client.getService().c_str());
+      }
     }
   }
 
@@ -177,6 +197,36 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     poseDebugPublisher.publish(pose);
   }
 
+  // call percept verification
+  float support_added_by_percept_verification = 0.0;
+  if (verificationServices.count("percept") > 0) {
+    worldmodel_msgs::VerifyPercept::Request request;
+    worldmodel_msgs::VerifyPercept::Response response;
+
+    request.percept = *percept;
+
+    std::vector<ros::ServiceClient> services(verificationServices["percept"]["*"]);
+    if (!percept->info.class_id.empty()) {
+      services.insert(services.end(), verificationServices["percept"][percept->info.class_id].begin(), verificationServices["percept"][percept->info.class_id].end());
+    }
+
+    for(std::vector<ros::ServiceClient>::iterator it = services.begin(); it != services.end(); ++it) {
+      if (it->call(request, response)) {
+        if (response.response == response.DISCARD) {
+          ROS_INFO("Discarded percept of class '%s' due to DISCARD message from service %s", percept->info.class_id.c_str(), it->getService().c_str());
+          return;
+        }
+        if (response.response == response.CONFIRM) {
+          ROS_INFO("We got a CONFIRMation for percept of class '%s' from service %s!", percept->info.class_id.c_str(), it->getService().c_str());
+          support_added_by_percept_verification = 100.0;
+        }
+        if (response.response == response.UNKNOWN) {
+          ROS_DEBUG("Verification service %s cannot help us with percept of class %s at the moment :-(", it->getService().c_str(), percept->info.class_id.c_str());
+        }
+      }
+    }
+  }
+
   // convert pose in tf
   tf::Pose pose;
   tf::poseMsgToTF(percept->pose.pose, pose);
@@ -252,7 +302,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   if (!percept->info.object_id.empty()) {
     support = percept->info.object_support;
   } else if (!percept->info.class_id.empty()) {
-    support = percept->info.class_support;
+    support = percept->info.class_support + support_added_by_percept_verification;
   }
 
   if (support == 0.0) {
@@ -318,14 +368,19 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   // unlock model
   model.unlock();
 
-  // call victim verification
-  if (verificationServices.size() > 0) {
+  // call object verification
+  if (verificationServices.count("object") > 0) {
     worldmodel_msgs::VerifyObject::Request request;
     worldmodel_msgs::VerifyObject::Response response;
 
     request.object = object->getObjectMessage();
 
-    for(std::vector<ros::ServiceClient>::iterator it = verificationServices.begin(); it != verificationServices.end(); ++it) {
+    std::vector<ros::ServiceClient> services(verificationServices["object"]["*"]);
+    if (!object->getClassId().empty()) {
+      services.insert(services.end(), verificationServices["object"][object->getClassId()].begin(), verificationServices["object"][object->getClassId()].end());
+    }
+
+    for(std::vector<ros::ServiceClient>::iterator it = services.begin(); it != services.end(); ++it) {
       if (it->call(request, response)) {
         if (response.response == response.DISCARD) {
           ROS_INFO("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->getService().c_str());

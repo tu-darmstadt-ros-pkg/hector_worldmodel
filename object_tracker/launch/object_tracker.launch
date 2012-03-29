@@ -3,9 +3,14 @@
 <launch>
     <node pkg="object_tracker" type="object_tracker" name="object_tracker" output="screen">
       <param name="project_objects" type="bool" value="true" />
-      <param name="verfication_services" type="string" value="/victim_verification/verify_victim" />
       <param name="min_height" type="double" value="-0.5" />
       <param name="max_height" type="double" value="0.5" />
+      <rosparam>
+        verification_services: [
+           { service: victim_verification/verify_victim, type: object, class_id: victim },
+        ]
+      </rosparam>
+
     </node>
 </launch>
 

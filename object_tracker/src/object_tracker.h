@@ -58,7 +58,7 @@ private:
   ros::ServiceServer setObjectState;
   ros::ServiceServer addObject;
   ros::ServiceServer getObjectModel;
-  std::vector<ros::ServiceClient> verificationServices;
+  std::map<std::string,std::map<std::string,std::vector<ros::ServiceClient> > > verificationServices;
 
   tf::TransformListener tf;
 
