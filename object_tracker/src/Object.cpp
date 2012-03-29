@@ -20,7 +20,7 @@ Object::Object(const std::string class_id, const std::string object_id)
     object.info.object_id = object.info.class_id + "_" + boost::lexical_cast<std::string>(object_count[object.info.class_id]++);
   }
 
-  if (object.info.object_id[0] != '/') object.info.object_id = object_namespace + "/" + object.info.object_id;
+  // if (object.info.object_id[0] != '/') object.info.object_id = object_namespace + "/" + object.info.object_id;
 }
 
 Object::~Object()
