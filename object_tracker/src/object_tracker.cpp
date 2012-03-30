@@ -222,7 +222,11 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     }
 
     for(std::vector<VerificationService>::iterator it = services.begin(); it != services.end(); ++it) {
-      if (it->first.call(request, response)) {
+      if (it->second.hasMember("ignore") && it->second["ignore"]) {
+        ROS_DEBUG("Calling service %s for percept of class '%s'', but ignoring its answer...", it->first.getService().c_str(), percept->info.class_id.c_str());
+        it->first.call(request, response);
+
+      } else if (it->first.call(request, response)) {
         if (response.response == response.DISCARD) {
           ROS_DEBUG("Discarded percept of class '%s' due to DISCARD message from service %s", percept->info.class_id.c_str(), it->first.getService().c_str());
           return;
@@ -411,7 +415,11 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     }
 
     for(std::vector<VerificationService>::iterator it = services.begin(); it != services.end(); ++it) {
-      if (it->first.call(request, response)) {
+      if (it->second.hasMember("ignore") && it->second["ignore"]) {
+        ROS_DEBUG("Calling service %s for object %s, but ignoring its answer...", it->first.getService().c_str(), object->getObjectId().c_str());
+        it->first.call(request, response);
+
+      } else if (it->first.call(request, response)) {
         if (response.response == response.DISCARD) {
           ROS_DEBUG("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->first.getService().c_str());
           object->setState(worldmodel_msgs::ObjectState::DISCARDED);
