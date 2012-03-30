@@ -90,6 +90,7 @@ ObjectTracker::ObjectTracker()
   }
 
   setObjectState = worldmodel.advertiseService("set_object_state", &ObjectTracker::setObjectStateCb, this);
+  setObjectName  = worldmodel.advertiseService("set_object_name", &ObjectTracker::setObjectNameCb, this);
   addObject = worldmodel.advertiseService("add_object", &ObjectTracker::addObjectCb, this);
   getObjectModel = worldmodel.advertiseService("get_object_model", &ObjectTracker::getObjectModelCb, this);
 }
@@ -400,6 +401,9 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   header.frame_id = _frame_id;
   object->setHeader(header);
 
+  // update object name
+  if (!percept->info.name.empty()) object->setName(percept->info.name);
+
   // unlock model
   model.unlock();
 
@@ -461,6 +465,23 @@ bool ObjectTracker::setObjectStateCb(worldmodel_msgs::SetObjectState::Request& r
   }
 
   object->setState(request.new_state.state);
+  modelUpdatePublisher.publish(object->getObjectMessage());
+
+  model.unlock();
+  publishModel();
+  return true;
+}
+
+bool ObjectTracker::setObjectNameCb(worldmodel_msgs::SetObjectName::Request& request, worldmodel_msgs::SetObjectName::Response& response) {
+  model.lock();
+
+  ObjectPtr object = model.getObject(request.object_id);
+  if (!object) {
+    model.unlock();
+    return false;
+  }
+
+  object->setName(request.name);
   modelUpdatePublisher.publish(object->getObjectMessage());
 
   model.unlock();

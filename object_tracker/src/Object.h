@@ -76,6 +76,14 @@ public:
       object.state.state = state;
     }
 
+    const std::string& getName() const {
+      return object.info.name;
+    }
+
+    void setName(const std::string& name) {
+      object.info.name = name;
+    }
+
     std_msgs::Header getHeader() const {
       return object.header;
     }

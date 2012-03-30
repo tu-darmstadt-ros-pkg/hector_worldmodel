@@ -6,6 +6,7 @@
 #include <worldmodel_msgs/ImagePercept.h>
 #include <worldmodel_msgs/PosePercept.h>
 #include <worldmodel_msgs/SetObjectState.h>
+#include <worldmodel_msgs/SetObjectName.h>
 #include <worldmodel_msgs/AddObject.h>
 #include <worldmodel_msgs/GetObjectModel.h>
 
@@ -30,6 +31,7 @@ public:
   void posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &);
 
   bool setObjectStateCb(worldmodel_msgs::SetObjectState::Request& request, worldmodel_msgs::SetObjectState::Response& response);
+  bool setObjectNameCb(worldmodel_msgs::SetObjectName::Request& request, worldmodel_msgs::SetObjectName::Response& response);
   bool addObjectCb(worldmodel_msgs::AddObject::Request& request, worldmodel_msgs::AddObject::Response& response);
   bool getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& request, worldmodel_msgs::GetObjectModel::Response& response);
 
@@ -58,6 +60,8 @@ private:
   ros::ServiceServer setObjectState;
   ros::ServiceServer addObject;
   ros::ServiceServer getObjectModel;
+  ros::ServiceServer setObjectName;
+
   typedef std::pair<ros::ServiceClient,XmlRpc::XmlRpcValue> VerificationService;
   std::map<std::string,std::map<std::string,std::vector<VerificationService> > > verificationServices;
 

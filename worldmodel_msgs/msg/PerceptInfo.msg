@@ -13,3 +13,6 @@ string object_id
 # The object association support of the observation
 # The support is the log odd likelihood ratio given by log(p(observation belongs to object object_id) / p(observation is false positive or belongs to another object))
 float32 object_support
+
+# A string that contains the name or a description of the specific object
+string name
