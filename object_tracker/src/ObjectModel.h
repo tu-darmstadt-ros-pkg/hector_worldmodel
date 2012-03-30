@@ -36,7 +36,6 @@ public:
 
     worldmodel_msgs::ObjectModelPtr getObjectModelMessage() const;
     void getVisualization(visualization_msgs::MarkerArray &markers) const;
-    void clearVisualization(visualization_msgs::MarkerArray &markers) const;
     void reset();
 
     iterator begin() { return objects.begin(); }

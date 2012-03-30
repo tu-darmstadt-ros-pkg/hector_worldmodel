@@ -86,11 +86,4 @@ void ObjectModel::getVisualization(visualization_msgs::MarkerArray &markers) con
   }
 }
 
-void ObjectModel::clearVisualization(visualization_msgs::MarkerArray &markers) const {
-  getVisualization(markers);
-  for(visualization_msgs::MarkerArray::_markers_type::iterator it = markers.markers.begin(); it != markers.markers.end(); ++it) {
-    it->action = visualization_msgs::Marker::DELETE;
-  }
-}
-
 } // namespace object_tracker
