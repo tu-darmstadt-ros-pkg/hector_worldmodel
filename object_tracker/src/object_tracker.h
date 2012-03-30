@@ -58,7 +58,8 @@ private:
   ros::ServiceServer setObjectState;
   ros::ServiceServer addObject;
   ros::ServiceServer getObjectModel;
-  std::map<std::string,std::map<std::string,std::vector<ros::ServiceClient> > > verificationServices;
+  typedef std::pair<ros::ServiceClient,XmlRpc::XmlRpcValue> VerificationService;
+  std::map<std::string,std::map<std::string,std::vector<VerificationService> > > verificationServices;
 
   tf::TransformListener tf;
 

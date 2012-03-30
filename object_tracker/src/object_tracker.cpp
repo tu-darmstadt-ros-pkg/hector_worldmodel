@@ -65,13 +65,20 @@ ObjectTracker::ObjectTracker()
       }
 
       if (!client.isValid()) continue;
-      if (!client.exists()) ROS_WARN("Verification service %s is not (yet) there...", client.getService().c_str());
+      if (!client.exists()) {
+        if (!item.hasMember("required") || !item["required"]) {
+          ROS_WARN("Verification service %s is not (yet) there...", client.getService().c_str());
+        } else {
+          ROS_WARN("Required verification service %s is not available... waiting...", client.getService().c_str());
+          while(ros::ok() && !client.waitForExistence(ros::Duration(1.0)));
+        }
+      }
 
       if (item.hasMember("class_id")) {
-        verificationServices[item["type"]][item["class_id"]].push_back(client);
+        verificationServices[item["type"]][item["class_id"]].push_back(std::make_pair(client, item));
         ROS_INFO("Using %s verification service %s for objects of class %s", std::string(item["type"]).c_str(), client.getService().c_str(), std::string(item["class_id"]).c_str());
       } else {
-        verificationServices[item["type"]]["*"].push_back(client);
+        verificationServices[item["type"]]["*"].push_back(std::make_pair(client, item));
         ROS_INFO("Using %s verification service %s", std::string(item["type"]).c_str(), client.getService().c_str());
       }
     }
@@ -209,24 +216,27 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
     request.percept = *percept;
 
-    std::vector<ros::ServiceClient> services(verificationServices["percept"]["*"]);
+    std::vector<VerificationService> services(verificationServices["percept"]["*"]);
     if (!percept->info.class_id.empty()) {
       services.insert(services.end(), verificationServices["percept"][percept->info.class_id].begin(), verificationServices["percept"][percept->info.class_id].end());
     }
 
-    for(std::vector<ros::ServiceClient>::iterator it = services.begin(); it != services.end(); ++it) {
-      if (it->call(request, response)) {
+    for(std::vector<VerificationService>::iterator it = services.begin(); it != services.end(); ++it) {
+      if (it->first.call(request, response)) {
         if (response.response == response.DISCARD) {
-          ROS_DEBUG("Discarded percept of class '%s' due to DISCARD message from service %s", percept->info.class_id.c_str(), it->getService().c_str());
+          ROS_DEBUG("Discarded percept of class '%s' due to DISCARD message from service %s", percept->info.class_id.c_str(), it->first.getService().c_str());
           return;
         }
         if (response.response == response.CONFIRM) {
-          ROS_DEBUG("We got a CONFIRMation for percept of class '%s' from service %s!", percept->info.class_id.c_str(), it->getService().c_str());
+          ROS_DEBUG("We got a CONFIRMation for percept of class '%s' from service %s!", percept->info.class_id.c_str(), it->first.getService().c_str());
           support_added_by_percept_verification = 100.0;
         }
         if (response.response == response.UNKNOWN) {
-          ROS_DEBUG("Verification service %s cannot help us with percept of class %s at the moment :-(", it->getService().c_str(), percept->info.class_id.c_str());
+          ROS_DEBUG("Verification service %s cannot help us with percept of class %s at the moment :-(", it->first.getService().c_str(), percept->info.class_id.c_str());
         }
+      } else if (it->second.hasMember("required") && it->second["required"]) {
+        ROS_DEBUG("Discarded percept of class '%s' as required service %s is not available", percept->info.class_id.c_str(), it->first.getService().c_str());
+        return;
       }
     }
   }
@@ -395,24 +405,27 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
     request.object = object->getObjectMessage();
 
-    std::vector<ros::ServiceClient> services(verificationServices["object"]["*"]);
+    std::vector<VerificationService> services(verificationServices["object"]["*"]);
     if (!object->getClassId().empty()) {
       services.insert(services.end(), verificationServices["object"][object->getClassId()].begin(), verificationServices["object"][object->getClassId()].end());
     }
 
-    for(std::vector<ros::ServiceClient>::iterator it = services.begin(); it != services.end(); ++it) {
-      if (it->call(request, response)) {
+    for(std::vector<VerificationService>::iterator it = services.begin(); it != services.end(); ++it) {
+      if (it->first.call(request, response)) {
         if (response.response == response.DISCARD) {
-          ROS_DEBUG("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->getService().c_str());
+          ROS_DEBUG("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->first.getService().c_str());
           object->setState(worldmodel_msgs::ObjectState::DISCARDED);
         }
         if (response.response == response.CONFIRM) {
-          ROS_DEBUG("We got a CONFIRMation for object %s from service %s!", object->getObjectId().c_str(), it->getService().c_str());
+          ROS_DEBUG("We got a CONFIRMation for object %s from service %s!", object->getObjectId().c_str(), it->first.getService().c_str());
           object->addSupport(100.0);
         }
         if (response.response == response.UNKNOWN) {
-          ROS_DEBUG("Verification service %s cannot help us with object %s at the moment :-(", it->getService().c_str(), object->getObjectId().c_str());
+          ROS_DEBUG("Verification service %s cannot help us with object %s at the moment :-(", it->first.getService().c_str(), object->getObjectId().c_str());
         }
+      } else if (it->second.hasMember("required") && it->second["required"]) {
+        ROS_DEBUG("Discarded object %s as required service %s is not available", object->getObjectId().c_str(), it->first.getService().c_str());
+        object->setState(worldmodel_msgs::ObjectState::DISCARDED);
       }
     }
   }
