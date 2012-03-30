@@ -90,13 +90,33 @@ void Object::update(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& cov
 
 void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   visualization_msgs::Marker marker;
+  std::string postfix;
+
+  // default color
+  marker.color.r = 0.8;
+  marker.color.g = 0.0;
+  marker.color.b = 0.0;
+  marker.color.a = 1.0;
+
+  switch(object.state.state) {
+    case worldmodel_msgs::ObjectState::CONFIRMED:
+      marker.color.r = 0.0;
+      marker.color.g = 0.8;
+      marker.color.b = 0.0;
+      postfix = " (CONFIRMED)";
+      break;
+    case worldmodel_msgs::ObjectState::DISCARDED:
+      marker.color.a = 0.5;
+      postfix = " (DISCARDED)";
+      break;
+    default:
+      break;
+  }
 
   marker.header = object.header;
   marker.action = visualization_msgs::Marker::ADD;
   marker.pose = object.pose.pose;
   marker.ns = "worldmodel";
-  marker.color.r = 1.0;
-  marker.color.a = std::max(0.0, std::min(1.0, object.info.support / 20.0));
 
   marker.type = visualization_msgs::Marker::ARROW;
   marker.scale.x = 1.0;
@@ -111,7 +131,7 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   markers.markers.push_back(marker);
 
   marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
-  marker.text = !object.info.name.empty() ? object.info.name : object.info.object_id;
+  marker.text = (!object.info.name.empty() ? object.info.name : object.info.object_id) + postfix;
   marker.scale.x = 0.0;
   marker.scale.y = 0.0;
   marker.scale.z = 0.1;
