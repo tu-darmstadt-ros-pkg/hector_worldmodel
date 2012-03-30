@@ -26,6 +26,10 @@ ObjectTracker::ObjectTracker()
   priv_nh.param("angle_variance", _angle_variance, pow(10.0 * M_PI / 180.0, 2));
   priv_nh.param("min_height", _min_height, -999.9);
   priv_nh.param("max_height", _max_height, 999.9);
+  priv_nh.param("pending_support", _pending_support, 0.0);
+  priv_nh.param("pending_time", _pending_time, 0.0);
+  priv_nh.param("active_support", _active_support, 0.0);
+  priv_nh.param("active_time", _active_time, 0.0);
 
   ros::NodeHandle worldmodel(_worldmodel_ns);
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
@@ -355,6 +359,20 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   // or simply decrease support
   } else {
     object->addSupport(support);
+  }
+
+  // update object state
+  if (object->getState() == worldmodel_msgs::ObjectState::UNKNOWN &&  _pending_support > 0) {
+    if (object->getSupport() >= _pending_support && (percept->header.stamp - object->getHeader().stamp).toSec() >= _pending_time) {
+      ROS_INFO("Setting object state for %s to PENDING", object->getObjectId().c_str());
+      object->setState(worldmodel_msgs::ObjectState::PENDING);
+    }
+  }
+  if (object->getState() == worldmodel_msgs::ObjectState::PENDING &&  _active_support > 0) {
+    if (object->getSupport() >= _active_support && (percept->header.stamp - object->getHeader().stamp).toSec() >= _active_time) {
+      ROS_INFO("Setting object state for %s to ACTIVE", object->getObjectId().c_str());
+      object->setState(worldmodel_msgs::ObjectState::ACTIVE);
+    }
   }
 
   // set object orientation

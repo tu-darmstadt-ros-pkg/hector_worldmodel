@@ -5,10 +5,12 @@
       <param name="project_objects" type="bool" value="true" />
       <param name="min_height" type="double" value="-0.5" />
       <param name="max_height" type="double" value="0.5" />
+      <param name="pending_support" type="double" value="1.0" />
+      <param name="active_support" type="double" value="10" >/
       <rosparam>
         verification_services: [
            { service: victim_verification/verify_victim, type: object, class_id: victim },
-           { service: thermal_self_filter/verify_percept, type: percept, class_id: victim },
+           { service: thermal_self_filter/verify_percept, type: percept, class_id: victim, required: true },
         ]
       </rosparam>
 

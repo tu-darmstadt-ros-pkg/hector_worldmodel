@@ -76,6 +76,10 @@ private:
   double _angle_variance;
   double _min_height;
   double _max_height;
+  double _pending_support;
+  double _pending_time;
+  double _active_support;
+  double _active_time;
 };
 
 } // namespace object_tracker
