@@ -33,6 +33,7 @@
 #include <worldmodel_msgs/GetObjectModel.h>
 
 #include <pluginlib/class_loader.h>
+#include <fstream>
 
 namespace worldmodel_geotiff_plugins {
 
@@ -124,6 +125,9 @@ public:
       return;
     }
 
+
+    std::ofstream description_file((interface->getBasePathAndFileName() + ".qrcodes.txt").c_str());
+
     int counter = 0;
     for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
       const worldmodel_msgs::Object& object = *it;
@@ -134,7 +138,13 @@ public:
       coords.x() = object.pose.pose.position.x;
       coords.y() = object.pose.pose.position.y;
       interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(10,10,240));
+
+      if (description_file.is_open()) {
+        description_file << counter << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << std::endl;
+      }
     }
+
+    description_file.close();
   }
 };
 
