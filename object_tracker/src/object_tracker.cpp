@@ -101,6 +101,13 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
 {
   if (sysCommand->data == "reset") {
     ROS_INFO("Resetting object model.");
+
+    // clear markers
+    visualization_msgs::MarkerArray markers;
+    model.clearVisualization(markers);
+    drawings.addMarkers(markers);
+    drawings.sendAndResetData();
+
     model.reset();
   }
 }
