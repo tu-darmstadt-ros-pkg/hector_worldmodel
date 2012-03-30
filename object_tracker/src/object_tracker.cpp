@@ -102,6 +102,7 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
   if (sysCommand->data == "reset") {
     ROS_INFO("Resetting object model.");
     model.reset();
+    drawings.reset();
   }
 }
 
@@ -473,7 +474,10 @@ bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, wo
 
   // check if object already exist
   if (!request.object.info.object_id.empty()) {
+    ROS_INFO("add_object service called for known %s object %s in frame %s", request.object.info.class_id.c_str(), request.object.info.object_id.c_str(), request.object.header.frame_id.c_str());
     object = model.getObject(request.object.info.object_id);
+  } else {
+    ROS_INFO("add_object service called for new %s object in frame %s", request.object.info.class_id.c_str(), request.object.header.frame_id.c_str());
   }
 
   // create a new object if object does not exist
