@@ -162,11 +162,11 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
         pose.setOrigin(pose.getOrigin().normalized() * distance);
         ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
       } else {
-        ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s returned %f", distanceToObstacle.getService().c_str(), response.distance);
+        ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s returned %f", distanceToObstacle.getService().c_str(), response.distance);
         return;
       }
     } else {
-      ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s failed", distanceToObstacle.getService().c_str());
+      ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s is not available", distanceToObstacle.getService().c_str());
       return;
     }
   }
