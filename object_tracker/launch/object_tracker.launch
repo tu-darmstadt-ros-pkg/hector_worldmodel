@@ -5,6 +5,7 @@
       <param name="project_objects" type="bool" value="true" />
       <param name="min_height" type="double" value="-0.5" />
       <param name="max_height" type="double" value="0.3" />
+      <param name="angle_variance" type="double" value="0.34906585" />
       <param name="pending_support" type="double" value="1.0" />
       <param name="active_support" type="double" value="10" />
       <rosparam>
