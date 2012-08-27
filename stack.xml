@@ -4,6 +4,12 @@
   <license>BSD</license>  
   <review status="unreviewed" notes=""/>
   <url>http://code.google.com/p/tu-darmstadt-ros-pkg/wiki/hector_worldmodel</url>
+  <depend stack="common_msgs" />
+  <depend stack="geometry" />
+  <depend stack="hector_common" />
+  <depend stack="hector_slam" />
   <depend stack="ros" />
+  <depend stack="ros_comm" />
+  <depend stack="vision_opencv" />
 
 </stack>
