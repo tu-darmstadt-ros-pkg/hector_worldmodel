@@ -3,7 +3,7 @@
   <author>Team Hector Darmstadt</author>
   <license>BSD</license>  
   <review status="unreviewed" notes=""/>
-  <url>http://code.google.com/p/tu-darmstadt-ros-pkg/wiki/hector_worldmodel</url>
+  <url>http://ros.org/wiki/hector_worldmodel</url>
   <depend stack="common_msgs" />
   <depend stack="geometry" />
   <depend stack="hector_common" />
