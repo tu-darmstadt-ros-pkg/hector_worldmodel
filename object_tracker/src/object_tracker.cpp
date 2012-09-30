@@ -30,10 +30,12 @@ ObjectTracker::ObjectTracker()
   priv_nh.param("pending_time", _pending_time, 0.0);
   priv_nh.param("active_support", _active_support, 0.0);
   priv_nh.param("active_time", _active_time, 0.0);
+  priv_nh.param("ageing_threshold", _ageing_threshold, 1.0);
 
   ros::NodeHandle worldmodel(_worldmodel_ns);
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
+  objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
   modelPublisher = worldmodel.advertise<worldmodel_msgs::ObjectModel>("objects", 10, false);
   modelUpdatePublisher = worldmodel.advertise<worldmodel_msgs::Object>("object", 10, false);
 
@@ -452,6 +454,35 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   }
 
   modelUpdatePublisher.publish(object->getObjectMessage());
+  publishModel();
+}
+
+void ObjectTracker::objectAgeingCb(const std_msgs::Float32ConstPtr &ageing) {
+  ROS_DEBUG("ageing of all objects by %f", ageing->data);
+
+  // lock model
+  model.lock();
+
+  ObjectModel::ObjectList objects = model.getObjects();
+  
+  for(ObjectModel::iterator it = objects.begin(); it != objects.end();) {
+    ObjectModel::ObjectPtr object = *it;
+
+    // update support
+    object->setSupport(object->getSupport() - ageing->data);
+
+    // remove the object if the support is to low
+    if (object->getSupport() < _ageing_threshold) {
+      ROS_INFO("remove object %s with support %f", object->getObjectId().c_str(), object->getSupport());
+      it = objects.erase(it);
+      model.remove(object);
+    } else {
+      it++;
+    }
+  }
+
+  // unlock model
+  model.unlock();
   publishModel();
 }
 

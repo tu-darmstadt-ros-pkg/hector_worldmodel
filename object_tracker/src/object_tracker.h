@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Float32.h>
 #include <worldmodel_msgs/ImagePercept.h>
 #include <worldmodel_msgs/PosePercept.h>
 #include <worldmodel_msgs/SetObjectState.h>
@@ -29,6 +30,7 @@ public:
   void sysCommandCb(const std_msgs::StringConstPtr &);
   void imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &);
   void posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &);
+  void objectAgeingCb(const std_msgs::Float32ConstPtr &);
 
   bool setObjectStateCb(worldmodel_msgs::SetObjectState::Request& request, worldmodel_msgs::SetObjectState::Response& response);
   bool setObjectNameCb(worldmodel_msgs::SetObjectName::Request& request, worldmodel_msgs::SetObjectName::Response& response);
@@ -50,6 +52,7 @@ private:
   ros::Subscriber imagePerceptSubscriber;
   ros::Subscriber posePerceptSubscriber;
   ros::Subscriber sysCommandSubscriber;
+  ros::Subscriber objectAgeingSubscriber;
 
   ros::Publisher modelPublisher;
   ros::Publisher modelUpdatePublisher;
@@ -85,6 +88,7 @@ private:
   double _pending_time;
   double _active_support;
   double _active_time;
+  double _ageing_threshold;
 };
 
 } // namespace object_tracker
