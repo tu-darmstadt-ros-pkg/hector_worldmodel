@@ -1,0 +1,17 @@
+<package>
+  <description brief="worldmodel_msgs">
+
+     worldmodel_msgs
+
+  </description>
+  <author>Team Hector Darmstadt</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/worldmodel_msgs</url>
+
+  <depend package="sensor_msgs" />
+  <depend package="geometry_msgs" />
+
+</package>
+
+
