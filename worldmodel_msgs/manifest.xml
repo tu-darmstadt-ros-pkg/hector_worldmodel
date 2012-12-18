@@ -1,10 +1,13 @@
 <package>
   <description brief="worldmodel_msgs">
 
-     worldmodel_msgs
+     worldmodel_msgs is a message package to comes with the hector_worldmodel stack.
+     The messages can be used to send percepts from images (worldmodel_msgs/ImagePercept) or other sources
+     (worldmodel_msgs/PosePercept) to the object_tracker node. The tracker publishes model updates as
+     worldmodel_msgs/Object message and latches the whole model state as a worldmodel_msgs/ObjectModel message.
 
   </description>
-  <author>Team Hector Darmstadt</author>
+  <author>Johannes Meyer</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/worldmodel_msgs</url>

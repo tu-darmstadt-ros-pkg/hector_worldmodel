@@ -1,6 +1,10 @@
 <stack>
-  <description brief="hector_worldmodel">hector_worldmodel</description>
-  <author>Team Hector Darmstadt</author>
+  <description brief="hector_worldmodel">
+    The hector_worldmodel stack helps to collect and fuse information about objects in the world.
+    It is used by Team Hector Darmstadt to localize victims and QR codes in the Robocup Rescue
+    scenario. See object_tracker for further details.
+  </description>
+  <author>Johannes Meyer</author>
   <license>BSD</license>  
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/hector_worldmodel</url>
