@@ -11,13 +11,13 @@
 
   <depend package="roscpp" />
   <depend package="tf" />
-  <depend package="tf_conversions" />
-  <depend package="eigen" />
   <depend package="image_geometry" />
 
   <depend package="worldmodel_msgs" />
   <depend package="hector_nav_msgs" />
   <depend package="hector_marker_drawing" />
+
+  <rosdep name="eigen" />
 
 </package>
 

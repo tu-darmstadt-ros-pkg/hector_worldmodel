@@ -7,8 +7,6 @@
 #include <Eigen/Geometry>
 #include <math.h>
 
-#include "LinearMath/btTransform.h"
-#include <tf_conversions/tf_eigen.h>
 #include "Object.h"
 
 #include <boost/algorithm/string.hpp>
@@ -180,8 +178,7 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   covariance(2,2) = _distance_variance;
 
   // rotate covariance matrix depending on the position in the image
-  Eigen::Quaterniond eigen_rotation;
-  tf::RotationTFToEigen(direction, eigen_rotation);
+  Eigen::Quaterniond eigen_rotation(direction.w(), direction.x(), direction.y(), direction.z());
   Eigen::Matrix3f rotation_camera_object(eigen_rotation.toRotationMatrix().cast<float>());
   covariance = rotation_camera_object * covariance * rotation_camera_object.transpose();
 
@@ -302,8 +299,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     pose = cameraTransform * pose;
 
     // rotate covariance matrix to map coordinates
-    Eigen::Quaterniond eigen_rotation;
-    tf::RotationTFToEigen(cameraTransform.getRotation(), eigen_rotation);
+    Eigen::Quaterniond eigen_rotation(cameraTransform.getRotation().w(), cameraTransform.getRotation().x(), cameraTransform.getRotation().y(), cameraTransform.getRotation().z());
     Eigen::Matrix3f rotation_map_camera(eigen_rotation.toRotationMatrix().cast<float>());
     covariance = rotation_map_camera * covariance * rotation_map_camera.transpose();
   }
