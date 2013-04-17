@@ -1,7 +1,7 @@
 #include "ObjectModel.h"
 #include "Object.h"
 
-namespace object_tracker {
+namespace hector_object_tracker {
 
 ObjectModel::ObjectModel()
 {}
@@ -86,4 +86,4 @@ void ObjectModel::getVisualization(visualization_msgs::MarkerArray &markers) con
   }
 }
 
-} // namespace object_tracker
+} // namespace hector_object_tracker

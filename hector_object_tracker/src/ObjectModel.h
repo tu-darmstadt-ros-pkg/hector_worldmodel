@@ -12,7 +12,7 @@
 #include <string>
 #include <boost/thread/recursive_mutex.hpp>
 
-namespace object_tracker {
+namespace hector_object_tracker {
 
 class Object;
 
@@ -59,6 +59,6 @@ private:
     mutable boost::recursive_mutex objectsMutex;
 };
 
-} // namespace object_tracker
+} // namespace hector_object_tracker
 
 #endif // OBJECT_TRACKER_OBJECTMODEL_H

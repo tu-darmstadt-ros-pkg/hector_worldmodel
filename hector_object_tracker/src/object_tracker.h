@@ -20,7 +20,7 @@
 
 #include "ObjectModel.h"
 
-namespace object_tracker {
+namespace hector_object_tracker {
 
 class ObjectTracker {
 public:
@@ -91,6 +91,6 @@ private:
   double _ageing_threshold;
 };
 
-} // namespace object_tracker
+} // namespace hector_object_tracker
 
 #endif // OBJECT_TRACKER_OBJECT_TRACKER_H

@@ -1,9 +1,7 @@
 <package>
-  <description brief="object_tracker">
+  <description brief="hector_object_tracker">
 
-     DEPRECATED. Please use package <a href="hector_object_tracker">hector_object_tracker</a> instead.
-
-     object_tracker is the core package of hector_worldmodel. It listens to percept message from
+     hector_object_tracker is the core package of hector_worldmodel. It listens to percept message from
      detectors (e.g. heat signatures of persons or recognitions of other objects of interest in the
      scene) and fuses all information to a single worldmodel state. Objects will be tracked over time
      and their states can be influenced by a couple of services.
@@ -18,9 +16,17 @@
   <author>Johannes Meyer</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/object_tracker</url>
+  <url>http://ros.org/wiki/hector_object_tracker</url>
 
-  <depend package="hector_object_tracker" />
+  <depend package="roscpp" />
+  <depend package="tf" />
+  <depend package="image_geometry" />
+
+  <depend package="worldmodel_msgs" />
+  <depend package="hector_nav_msgs" />
+  <depend package="hector_marker_drawing" />
+
+  <rosdep name="eigen" />
 
 </package>
 

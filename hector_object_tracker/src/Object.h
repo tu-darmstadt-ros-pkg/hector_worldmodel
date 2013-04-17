@@ -11,7 +11,7 @@
 
 #include <map>
 
-namespace object_tracker {
+namespace hector_object_tracker {
 
 class Object
 {
@@ -112,6 +112,6 @@ typedef Object::Ptr ObjectPtr;
 typedef Object::ConstPtr ObjectConstPtr;
 typedef Object::State ObjectState;
 
-} // namespace object_tracker
+} // namespace hector_object_tracker
 
 #endif // OBJECT_TRACKER_OBJECT_H

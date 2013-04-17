@@ -11,7 +11,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-namespace object_tracker {
+namespace hector_object_tracker {
 
 ObjectTracker::ObjectTracker()
 {
@@ -667,14 +667,14 @@ void ObjectTracker::publishModel() {
   drawings.sendAndResetData();
 }
 
-} // namespace object_tracker
+} // namespace hector_object_tracker
 
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, ROS_PACKAGE_NAME);
+  ros::init(argc, argv, "object_tracker");
 
-  object_tracker::ObjectTracker tracker;
+  hector_object_tracker::ObjectTracker tracker;
   ros::spin();
 
   exit(0);

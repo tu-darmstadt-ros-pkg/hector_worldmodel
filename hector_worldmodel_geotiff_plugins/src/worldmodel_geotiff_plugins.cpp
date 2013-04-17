@@ -35,7 +35,7 @@
 #include <pluginlib/class_loader.h>
 #include <fstream>
 
-namespace worldmodel_geotiff_plugins {
+namespace hector_worldmodel_geotiff_plugins {
 
 using namespace hector_geotiff;
 
@@ -152,6 +152,6 @@ public:
 
 //register this planner as a MapWriterPluginInterface plugin
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_DECLARE_CLASS(worldmodel_geotiff_plugins, VictimMapWriter, worldmodel_geotiff_plugins::VictimMapWriter, hector_geotiff::MapWriterPluginInterface)
-PLUGINLIB_DECLARE_CLASS(worldmodel_geotiff_plugins, QRCodeMapWriter, worldmodel_geotiff_plugins::QRCodeMapWriter, hector_geotiff::MapWriterPluginInterface)
+PLUGINLIB_DECLARE_CLASS(hector_worldmodel_geotiff_plugins, VictimMapWriter, hector_worldmodel_geotiff_plugins::VictimMapWriter, hector_geotiff::MapWriterPluginInterface)
+PLUGINLIB_DECLARE_CLASS(hector_worldmodel_geotiff_plugins, QRCodeMapWriter, hector_worldmodel_geotiff_plugins::QRCodeMapWriter, hector_geotiff::MapWriterPluginInterface)
 

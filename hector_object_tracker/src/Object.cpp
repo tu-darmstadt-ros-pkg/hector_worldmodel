@@ -1,7 +1,7 @@
 #include "Object.h"
 #include <boost/lexical_cast.hpp>
 
-namespace object_tracker {
+namespace hector_object_tracker {
 
 std::map<std::string,unsigned int> Object::object_count;
 std::string Object::object_namespace;
@@ -143,4 +143,4 @@ void Object::setNamespace(const std::string &ns) {
   object_namespace = ns;
 }
 
-} // namespace object_tracker
+} // namespace hector_object_tracker
