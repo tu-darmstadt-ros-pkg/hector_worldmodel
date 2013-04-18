@@ -7,4 +7,4 @@ set(SOURCES
   ObjectModel.h
 )
 
-rosbuild_add_executable(${PROJECT_NAME} ${SOURCES})
+rosbuild_add_executable(object_tracker ${SOURCES})
