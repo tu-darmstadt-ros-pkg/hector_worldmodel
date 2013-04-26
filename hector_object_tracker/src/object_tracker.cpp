@@ -591,7 +591,10 @@ bool ObjectTracker::getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& r
 }
 
 bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const worldmodel_msgs::ObjectInfo &info, geometry_msgs::Pose &mapped) {
-  if (!param(_distance_to_obstacle_service, info.class_id).exists()) return false;
+  if (!param(_distance_to_obstacle_service, info.class_id).exists()) {
+    ROS_ERROR("Could not map object to next obstacle as the distance service %s is not available", param(_distance_to_obstacle_service, info.class_id).getService().c_str());
+    return false;
+  }
 
   // retrieve distance information
   float distance = param(_default_distance, info.class_id);
