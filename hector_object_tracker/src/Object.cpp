@@ -1,6 +1,8 @@
 #include "Object.h"
 #include <boost/lexical_cast.hpp>
 
+#include "parameters.h"
+
 namespace hector_object_tracker {
 
 std::map<std::string,unsigned int> Object::object_count;
@@ -93,10 +95,7 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   std::string postfix;
 
   // default color
-  marker.color.r = 0.8;
-  marker.color.g = 0.0;
-  marker.color.b = 0.0;
-  marker.color.a = 1.0;
+  marker.color = param(_marker_color, object.info.class_id);
 
   switch(object.state.state) {
     case worldmodel_msgs::ObjectState::CONFIRMED:
@@ -116,7 +115,7 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   marker.header = object.header;
   marker.action = visualization_msgs::Marker::ADD;
   marker.pose = object.pose.pose;
-  marker.ns = "worldmodel";
+  marker.ns = object.info.class_id;
 
   marker.type = visualization_msgs::Marker::ARROW;
   marker.scale.x = 1.0;

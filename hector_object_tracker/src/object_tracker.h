@@ -16,8 +16,6 @@
 
 #include <hector_marker_drawing/HectorDrawings.h>
 
-#include <map>
-
 #include "ObjectModel.h"
 
 namespace hector_object_tracker {
@@ -40,15 +38,17 @@ public:
   ObjectModel& getModel()             { return model; }
   const ObjectModel& getModel() const { return model; }
 
+  void publishModelEvent(const ros::TimerEvent&);
   void publishModel();
 
 protected:
   bool transformPose(const geometry_msgs::Pose& from, geometry_msgs::Pose &to, std_msgs::Header &header, tf::StampedTransform *transform = 0);
   bool transformPose(const geometry_msgs::PoseWithCovariance& from, geometry_msgs::PoseWithCovariance &to, std_msgs::Header &header);
-  bool mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, geometry_msgs::Pose &mapped);
+  bool mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const worldmodel_msgs::ObjectInfo &info, geometry_msgs::Pose &mapped);
 
 private:
   ros::NodeHandle nh;
+  ros::NodeHandle priv_nh;
   ros::Subscriber imagePerceptSubscriber;
   ros::Subscriber posePerceptSubscriber;
   ros::Subscriber sysCommandSubscriber;
@@ -59,11 +59,12 @@ private:
   ros::Publisher poseDebugPublisher;
   ros::Publisher pointDebugPublisher;
 
-  ros::ServiceClient distanceToObstacle;
   ros::ServiceServer setObjectState;
   ros::ServiceServer addObject;
   ros::ServiceServer getObjectModel;
   ros::ServiceServer setObjectName;
+
+  ros::Timer publishTimer;
 
   typedef std::pair<ros::ServiceClient,XmlRpc::XmlRpcValue> VerificationService;
   std::map<std::string,std::map<std::string,std::vector<VerificationService> > > verificationServices;
@@ -76,19 +77,11 @@ private:
   typedef boost::shared_ptr<image_geometry::PinholeCameraModel> CameraModelPtr;
   std::map<std::string,CameraModelPtr> cameraModels;
 
-  bool _project_objects;
   std::string _frame_id;
   std::string _worldmodel_ns;
-  double _default_distance;
-  double _distance_variance;
-  double _angle_variance;
-  double _min_height;
-  double _max_height;
-  double _pending_support;
-  double _pending_time;
-  double _active_support;
-  double _active_time;
+
   double _ageing_threshold;
+  double _publish_interval;
 };
 
 } // namespace hector_object_tracker

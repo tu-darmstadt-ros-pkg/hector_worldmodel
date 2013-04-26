@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include "Object.h"
+#include "parameters.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -16,19 +17,27 @@ namespace hector_object_tracker {
 ObjectTracker::ObjectTracker()
 {
   ros::NodeHandle priv_nh("~");
-  priv_nh.param("project_objects", _project_objects, false);
   priv_nh.param("frame_id", _frame_id, std::string("map"));
   priv_nh.param("worldmodel_ns", _worldmodel_ns, std::string("worldmodel"));
-  priv_nh.param("default_distance", _default_distance, 1.0);
-  priv_nh.param("distance_variance", _distance_variance, pow(1.0, 2));
-  priv_nh.param("angle_variance", _angle_variance, pow(10.0 * M_PI / 180.0, 2));
-  priv_nh.param("min_height", _min_height, -999.9);
-  priv_nh.param("max_height", _max_height, 999.9);
-  priv_nh.param("pending_support", _pending_support, 0.0);
-  priv_nh.param("pending_time", _pending_time, 0.0);
-  priv_nh.param("active_support", _active_support, 0.0);
-  priv_nh.param("active_time", _active_time, 0.0);
   priv_nh.param("ageing_threshold", _ageing_threshold, 1.0);
+  priv_nh.param("publish_interval", _publish_interval, 0.0);
+
+  param(_project_objects)   = false;
+  param(_default_distance)  = 1.0;
+  param(_distance_variance) = pow(1.0, 2);
+  param(_angle_variance)    = pow(10.0 * M_PI / 180.0, 2);
+  param(_min_height)        = -999.9;
+  param(_max_height)        = 999.9;
+  param(_pending_support)   = 0.0;
+  param(_pending_time)      = 0.0;
+  param(_active_support)    = 0.0;
+  param(_active_time)       = 0.0;
+
+  std_msgs::ColorRGBA default_color;
+  default_color.r = 0.8; default_color.a = 1.0;
+  param(_marker_color)      = default_color;
+
+  Parameters::load();
 
   ros::NodeHandle worldmodel(_worldmodel_ns);
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
@@ -38,7 +47,6 @@ ObjectTracker::ObjectTracker()
   modelUpdatePublisher = worldmodel.advertise<worldmodel_msgs::Object>("object", 10, false);
 
   Object::setNamespace(_worldmodel_ns);
-  drawings.setNamespace(_worldmodel_ns);
 
   sysCommandSubscriber = nh.subscribe("syscommand", 10, &ObjectTracker::sysCommandCb, this);
   poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
@@ -84,15 +92,14 @@ ObjectTracker::ObjectTracker()
     }
   }
 
-  distanceToObstacle = nh.serviceClient<hector_nav_msgs::GetDistanceToObstacle>("get_distance_to_obstacle");
-  if (_project_objects && !distanceToObstacle.waitForExistence(ros::Duration(5.0))) {
-    ROS_WARN("_project_objects is true, but GetDistanceToObstacle service is not (yet) available");
-  }
-
   setObjectState = worldmodel.advertiseService("set_object_state", &ObjectTracker::setObjectStateCb, this);
   setObjectName  = worldmodel.advertiseService("set_object_name", &ObjectTracker::setObjectNameCb, this);
   addObject = worldmodel.advertiseService("add_object", &ObjectTracker::addObjectCb, this);
   getObjectModel = worldmodel.advertiseService("get_object_model", &ObjectTracker::getObjectModelCb, this);
+
+  if (_publish_interval > 0.0) {
+    publishTimer = nh.createTimer(ros::Duration(_publish_interval), &ObjectTracker::publishModelEvent, this, false, true);
+  }
 }
 
 ObjectTracker::~ObjectTracker()
@@ -118,7 +125,7 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   posePercept->info = percept->info;
 
   // retrieve distance information
-  float distance = percept->distance > 0.0 ? percept->distance : _default_distance;
+  float distance = percept->distance > 0.0 ? percept->distance : param(_default_distance, percept->info.class_id);
 
   // retrieve camera model from either the cache or from CameraInfo given in the percept
   CameraModelPtr cameraModel;
@@ -148,34 +155,34 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   ROS_DEBUG("--> Projected 3D ray (OpenCV):   [%f,%f,%f]", direction_cv.x, direction_cv.y, direction_cv.z);
   ROS_DEBUG("--> Projected 3D ray (tf):       [%f,%f,%f]", pose.getOrigin().x(), pose.getOrigin().y(),pose.getOrigin().z());
 
-  if (percept->distance == 0.0 && _project_objects) {
+  if (percept->distance == 0.0 && param(_project_objects, percept->info.class_id)) {
     hector_nav_msgs::GetDistanceToObstacle::Request request;
     hector_nav_msgs::GetDistanceToObstacle::Response response;
 
     // project image percept to the next obstacle
     request.point.header = percept->header;
     tf::pointTFToMsg(pose.getOrigin(), request.point.point);
-    if (distanceToObstacle.call(request, response)) {
+    if (param(_distance_to_obstacle_service, percept->info.class_id).call(request, response)) {
       if (response.distance > 0.0) {
         // distance = std::max(response.distance - 0.1f, 0.0f);
         distance = std::max(response.distance, 0.0f);
         pose.setOrigin(pose.getOrigin().normalized() * distance);
         ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
       } else {
-        ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s returned %f", distanceToObstacle.getService().c_str(), response.distance);
+        ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s returned %f", param(_distance_to_obstacle_service, percept->info.class_id).getService().c_str(), response.distance);
         return;
       }
     } else {
-      ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s is not available", distanceToObstacle.getService().c_str());
+      ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s is not available", param(_distance_to_obstacle_service, percept->info.class_id).getService().c_str());
       return;
     }
   }
 
   // set variance
   Eigen::Matrix3f covariance(Eigen::Matrix3f::Zero());
-  covariance(0,0) = std::max(distance*distance, 1.0f) * tan(_angle_variance);
+  covariance(0,0) = std::max(distance*distance, 1.0f) * tan(param(_angle_variance, percept->info.class_id));
   covariance(1,1) = covariance(0,0);
-  covariance(2,2) = _distance_variance;
+  covariance(2,2) = param(_distance_variance, percept->info.class_id);
 
   // rotate covariance matrix depending on the position in the image
   Eigen::Quaterniond eigen_rotation(direction.w(), direction.x(), direction.y(), direction.z());
@@ -252,14 +259,14 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
   // retrieve distance information
 //  float distance = pose.getOrigin().length();
-//  if (_project_objects) {
+//  if (param(_project_objects, percept->info.class_id)) {
 //    hector_nav_msgs::GetDistanceToObstacle::Request request;
 //    hector_nav_msgs::GetDistanceToObstacle::Response response;
 
 //    // project image percept to the next obstacle
 //    request.point.header = percept->header;
 //    tf::pointTFToMsg(pose.getOrigin(), request.point.point);
-//    if (distanceToObstacle.call(request, response) && response.distance > 0.0) {
+//    if (param(_distance_to_obstacle_service, percept->info.class_id).call(request, response) && response.distance > 0.0) {
 //      // distance = std::max(response.distance - 0.1f, 0.0f);
 //      distance = std::max(response.distance, 0.0f);
 //      pose.setOrigin(pose.getOrigin().normalized() * distance);
@@ -277,9 +284,9 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
   // if no variance is given, set variance to default
   if (covariance.isZero()) {
-    covariance(0,0) = _distance_variance;
-    covariance(1,1) = _distance_variance;
-    covariance(2,2) = _distance_variance;
+    covariance(0,0) = param(_distance_variance, percept->info.class_id);
+    covariance(1,1) = param(_distance_variance, percept->info.class_id);
+    covariance(2,2) = param(_distance_variance, percept->info.class_id);
   }
 
   // project percept coordinates to map frame
@@ -307,7 +314,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
   // check height
   float relative_height = pose.getOrigin().z() - cameraTransform.getOrigin().z();
-  if (relative_height < _min_height || relative_height > _max_height) {
+  if (relative_height < param(_min_height, percept->info.class_id) || relative_height > param(_max_height, percept->info.class_id)) {
     ROS_INFO("Discarding %s percept with height %f", percept->info.class_id.c_str(), relative_height);
     return;
   }
@@ -376,14 +383,14 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   }
 
   // update object state
-  if (object->getState() == worldmodel_msgs::ObjectState::UNKNOWN &&  _pending_support > 0) {
-    if (object->getSupport() >= _pending_support && (percept->header.stamp - object->getHeader().stamp).toSec() >= _pending_time) {
+  if (object->getState() == worldmodel_msgs::ObjectState::UNKNOWN &&  param(_pending_support, percept->info.class_id) > 0) {
+    if (object->getSupport() >= param(_pending_support, percept->info.class_id) && (percept->header.stamp - object->getHeader().stamp).toSec() >= param(_pending_time, percept->info.class_id)) {
       ROS_INFO("Setting object state for %s to PENDING", object->getObjectId().c_str());
       object->setState(worldmodel_msgs::ObjectState::PENDING);
     }
   }
-  if (object->getState() == worldmodel_msgs::ObjectState::PENDING &&  _active_support > 0) {
-    if (object->getSupport() >= _active_support && (percept->header.stamp - object->getHeader().stamp).toSec() >= _active_time) {
+  if (object->getState() == worldmodel_msgs::ObjectState::PENDING &&  param(_active_support, percept->info.class_id) > 0) {
+    if (object->getSupport() >= param(_active_support, percept->info.class_id) && (percept->header.stamp - object->getHeader().stamp).toSec() >= param(_active_time, percept->info.class_id)) {
       ROS_INFO("Setting object state for %s to ACTIVE", object->getObjectId().c_str());
       object->setState(worldmodel_msgs::ObjectState::ACTIVE);
     }
@@ -540,7 +547,7 @@ bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, wo
   geometry_msgs::PoseWithCovariance pose;
   if (request.map_to_next_obstacle) {
     pose.covariance = request.object.pose.covariance;
-    if (!mapToNextObstacle(request.object.pose.pose, header, pose.pose)) {
+    if (!mapToNextObstacle(request.object.pose.pose, header, request.object.info, pose.pose)) {
       return false;
     }
   } else {
@@ -583,11 +590,11 @@ bool ObjectTracker::getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& r
   return true;
 }
 
-bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, geometry_msgs::Pose &mapped) {
-  if (!distanceToObstacle.exists()) return false;
+bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const worldmodel_msgs::ObjectInfo &info, geometry_msgs::Pose &mapped) {
+  if (!param(_distance_to_obstacle_service, info.class_id).exists()) return false;
 
   // retrieve distance information
-  float distance = _default_distance;
+  float distance = param(_default_distance, info.class_id);
   hector_nav_msgs::GetDistanceToObstacle::Request request;
   hector_nav_msgs::GetDistanceToObstacle::Response response;
 
@@ -598,7 +605,7 @@ bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const s
   // tf::Quaternion direction_quaternion = tf::Quaternion(atan(direction.y/direction.x), atan(direction.z/direction.x), 0.0);
   // direction_quaternion *= cameraTransform.getRotation();
   // tf::quaternionTFToMsg(direction_quaternion, request.pose.pose.orientation);
-  if (distanceToObstacle.call(request, response) && response.distance > 0.0) {
+  if (param(_distance_to_obstacle_service, info.class_id).call(request, response) && response.distance > 0.0) {
     // distance = std::max(response.distance - 0.1f, 0.0f);
     distance = std::max(response.distance, 0.0f);
   } else {
@@ -645,6 +652,10 @@ bool ObjectTracker::transformPose(const geometry_msgs::PoseWithCovariance& from,
   // rotate covariance matrix
 
   return true;
+}
+
+void ObjectTracker::publishModelEvent(const ros::TimerEvent&) {
+  publishModel();
 }
 
 void ObjectTracker::publishModel() {
