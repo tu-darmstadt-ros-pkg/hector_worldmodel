@@ -50,6 +50,7 @@ std::map<std::string, std_msgs::ColorRGBA> _marker_color;
 std::map<std::string, ros::ServiceClient> _distance_to_obstacle_service;
 
 namespace Parameters {
+
   void load(const std::string &class_id /* = std::string() */)
   {
     static std::set<std::string> _per_class_parameters_loaded;
@@ -114,6 +115,6 @@ namespace Parameters {
 
     _per_class_parameters_loaded.insert(class_id);
   }
-} // namespace Parameters
 
+} // namespace Parameters
 } // namespace hector_object_tracker

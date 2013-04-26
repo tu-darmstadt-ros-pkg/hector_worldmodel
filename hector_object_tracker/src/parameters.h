@@ -54,7 +54,6 @@ namespace hector_object_tracker {
   }
 
   template <typename T> static inline T& param(std::map<std::string, T>& p, const std::string& class_id = std::string()) {
-    Parameters::load(class_id);
     if (p.count(class_id)) return p.at(class_id);
     return p[std::string()];
   }

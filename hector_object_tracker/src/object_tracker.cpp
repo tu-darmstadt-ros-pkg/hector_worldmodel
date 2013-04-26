@@ -119,6 +119,8 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   worldmodel_msgs::PosePerceptPtr posePercept(new worldmodel_msgs::PosePercept);
   tf::Pose pose;
 
+  Parameters::load(percept->info.class_id);
+
   ROS_DEBUG("Incoming image percept with image coordinates [%f,%f] in frame %s", percept->x, percept->y, percept->header.frame_id.c_str());
 
   posePercept->header = percept->header;
@@ -208,6 +210,8 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
 
 void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &percept)
 {
+  Parameters::load(percept->info.class_id);
+
   // publish pose in source frame for debugging purposes
   if (poseDebugPublisher.getNumSubscribers() > 0) {
     geometry_msgs::PoseStamped pose;
@@ -591,6 +595,8 @@ bool ObjectTracker::getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& r
 }
 
 bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const worldmodel_msgs::ObjectInfo &info, geometry_msgs::Pose &mapped) {
+  Parameters::load(info.class_id);
+
   if (!param(_distance_to_obstacle_service, info.class_id).exists()) {
     ROS_ERROR("Could not map object to next obstacle as the distance service %s is not available", param(_distance_to_obstacle_service, info.class_id).getService().c_str());
     return false;
