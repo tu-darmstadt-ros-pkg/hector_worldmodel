@@ -45,6 +45,7 @@ ObjectTracker::ObjectTracker()
   objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
   modelPublisher = worldmodel.advertise<worldmodel_msgs::ObjectModel>("objects", 10, false);
   modelUpdatePublisher = worldmodel.advertise<worldmodel_msgs::Object>("object", 10, false);
+  modelUpdateSubscriber = worldmodel.subscribe<worldmodel_msgs::ObjectModel>("update", 10, &ObjectTracker::modelUpdateCb, this);
 
   Object::setNamespace(_worldmodel_ns);
 
@@ -491,6 +492,19 @@ void ObjectTracker::objectAgeingCb(const std_msgs::Float32ConstPtr &ageing) {
   // unlock model
   model.unlock();
   publishModel();
+}
+
+void ObjectTracker::modelUpdateCb(const worldmodel_msgs::ObjectModelConstPtr &update)
+{
+  for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = update->objects.begin(); it != update->objects.end(); ++it)
+  {
+    worldmodel_msgs::AddObject object;
+    object.request.map_to_next_obstacle = false;
+    object.request.object = *it;
+    if (!addObjectCb(object.request, object.response)) {
+      ROS_WARN("Could not update object %s", it->info.object_id.c_str());
+    }
+  }
 }
 
 bool ObjectTracker::setObjectStateCb(worldmodel_msgs::SetObjectState::Request& request, worldmodel_msgs::SetObjectState::Response& response) {

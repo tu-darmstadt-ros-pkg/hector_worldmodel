@@ -30,6 +30,8 @@ public:
   void posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &);
   void objectAgeingCb(const std_msgs::Float32ConstPtr &);
 
+  void modelUpdateCb(const worldmodel_msgs::ObjectModelConstPtr &);
+
   bool setObjectStateCb(worldmodel_msgs::SetObjectState::Request& request, worldmodel_msgs::SetObjectState::Response& response);
   bool setObjectNameCb(worldmodel_msgs::SetObjectName::Request& request, worldmodel_msgs::SetObjectName::Response& response);
   bool addObjectCb(worldmodel_msgs::AddObject::Request& request, worldmodel_msgs::AddObject::Response& response);
@@ -58,6 +60,7 @@ private:
   ros::Publisher modelUpdatePublisher;
   ros::Publisher poseDebugPublisher;
   ros::Publisher pointDebugPublisher;
+  ros::Subscriber modelUpdateSubscriber;
 
   ros::ServiceServer setObjectState;
   ros::ServiceServer addObject;
