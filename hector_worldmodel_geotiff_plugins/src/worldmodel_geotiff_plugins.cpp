@@ -35,6 +35,9 @@
 #include <pluginlib/class_loader.h>
 #include <fstream>
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/gregorian/formatters.hpp>
+
 namespace hector_worldmodel_geotiff_plugins {
 
 using namespace hector_geotiff;
@@ -115,6 +118,7 @@ class QRCodeMapWriter : public MapWriterPlugin
 public:
   virtual ~QRCodeMapWriter() {}
 
+  
   void draw(MapWriterInterface *interface)
   {
     if (!initialized_) return;
@@ -125,8 +129,22 @@ public:
       return;
     }
 
+    std::string team_name;
+    std::string mission_name;
+    nh_.getParamCached("/team", team_name);
+    nh_.getParamCached("/mission", mission_name);
 
-    std::ofstream description_file((interface->getBasePathAndFileName() + ".qrcodes.txt").c_str());
+    boost::posix_time::ptime now = ros::Time::now().toBoost();
+    boost::gregorian::date now_date(now.date());
+    boost::posix_time::time_duration now_time(now.time_of_day().hours(), now.time_of_day().minutes(), now.time_of_day().seconds(), 0);
+
+    std::ofstream description_file((interface->getBasePathAndFileName() + "_qr.csv").c_str());
+    if (description_file.is_open()) {
+      if (!team_name.empty()) description_file << team_name << std::endl;
+      description_file << now_date << "; " << now_time << std::endl;
+      if (!mission_name.empty()) description_file << mission_name << std::endl;
+      description_file << std::endl;
+    }
 
     int counter = 0;
     for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
@@ -140,7 +158,9 @@ public:
       interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(10,10,240));
 
       if (description_file.is_open()) {
-        description_file << counter << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << std::endl;
+        boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
+        boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
+        description_file << counter << ";" << time << ";" << object.info.object_id << ";" << object.pose.pose.position.x << ";" << object.pose.pose.position.y << ";" << object.pose.pose.position.z << std::endl;
       }
     }
 
