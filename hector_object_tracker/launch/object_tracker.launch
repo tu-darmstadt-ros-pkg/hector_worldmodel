@@ -9,7 +9,7 @@
       <param name="victim/pending_support" type="double" value="1.0" />
       <param name="victim/active_support" type="double" value="10" />
       <param name="victim/min_height" type="double" value="-0.5" />
-      <param name="victim/max_height" type="double" value="0.6" />
+      <param name="victim/max_height" type="double" value="0.5" />
       <rosparam param="victim/marker_color">[0.8, 0.0, 0.0]</rosparam>
       <rosparam param="qrcode/marker_color">[0.0, 0.0, 0.8]</rosparam>
 
