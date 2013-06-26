@@ -1,6 +1,9 @@
 #include "Object.h"
 #include <boost/lexical_cast.hpp>
 
+#include <Eigen/Geometry>
+#include <tf/transform_datatypes.h>
+
 #include "parameters.h"
 
 namespace hector_object_tracker {
@@ -25,6 +28,10 @@ Object::Object(const std::string class_id, const std::string object_id)
   // if (object.info.object_id[0] != '/') object.info.object_id = object_namespace + "/" + object.info.object_id;
 }
 
+Object::Object(const worldmodel_msgs::Object& other) {
+  *this = other;
+}
+
 Object::~Object()
 {}
 
@@ -32,8 +39,36 @@ void Object::reset() {
   object_count.clear();
 }
 
+void Object::setPose(const geometry_msgs::PoseWithCovariance& pose)
+{
+  setPose(pose.pose);
+  object.pose.covariance = pose.covariance;
+}
+
+void Object::setPose(const geometry_msgs::Pose& pose)
+{
+  setPosition(pose.position);
+  setOrientation(pose.orientation);
+}
+
+void Object::setPose(const tf::Pose &pose)
+{
+  setPosition(pose.getOrigin());
+  tf::Quaternion rot;
+  pose.getBasis().getRotation(rot);
+  setOrientation(rot);
+}
+
 const Eigen::Vector3f& Object::getPosition() const {
   return position;
+}
+
+void Object::setPosition(const geometry_msgs::Point& position) {
+  object.pose.pose.position = position;
+
+  this->position.x() = position.x;
+  this->position.y() = position.y;
+  this->position.z() = position.z;
 }
 
 void Object::setPosition(const Eigen::Vector3f& position) {
@@ -42,15 +77,54 @@ void Object::setPosition(const Eigen::Vector3f& position) {
   object.pose.pose.position.x = position.x();
   object.pose.pose.position.y = position.y();
   object.pose.pose.position.z = position.z();
-  object.pose.pose.orientation.w = 1.0;
+}
+
+void Object::setPosition(const tf::Point& position)
+{
+  this->position.x() = position.x();
+  this->position.y() = position.y();
+  this->position.z() = position.z();
+
+  object.pose.pose.position.x = position.x();
+  object.pose.pose.position.y = position.y();
+  object.pose.pose.position.z = position.z();
+}
+
+void Object::setOrientation(const geometry_msgs::Quaternion& orientation)
+{
+  object.pose.pose.orientation = orientation;
+}
+
+void Object::setOrientation(const tf::Quaternion& orientation)
+{
+  object.pose.pose.orientation.w = orientation.w();
+  object.pose.pose.orientation.x = orientation.x();
+  object.pose.pose.orientation.y = orientation.y();
+  object.pose.pose.orientation.z = orientation.z();
 }
 
 const Eigen::Matrix3f& Object::getCovariance() const {
   return covariance;
 }
 
-void Object::setCovariance(const Eigen::Matrix3f& covariance) {
-  this->covariance = covariance;
+void Object::setCovariance(const Eigen::Matrix3f& eigen) {
+  this->covariance = eigen;
+
+  object.pose.covariance[0]  = covariance(0,0);
+  object.pose.covariance[1]  = covariance(0,1);
+  object.pose.covariance[2]  = covariance(0,2);
+  object.pose.covariance[6]  = covariance(1,0);
+  object.pose.covariance[7]  = covariance(1,1);
+  object.pose.covariance[8]  = covariance(1,2);
+  object.pose.covariance[12] = covariance(2,0);
+  object.pose.covariance[13] = covariance(2,1);
+  object.pose.covariance[14] = covariance(2,2);
+}
+
+void Object::setCovariance(const tf::Matrix3x3& tf) {
+  this->covariance << tf[0][0], tf[0][1], tf[0][2],
+                      tf[1][0], tf[1][1], tf[1][2],
+                      tf[2][0], tf[2][1], tf[2][2];
 
   object.pose.covariance[0]  = covariance(0,0);
   object.pose.covariance[1]  = covariance(0,1);
@@ -140,6 +214,58 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
 
 void Object::setNamespace(const std::string &ns) {
   object_namespace = ns;
+}
+
+Object& Object::operator =(const worldmodel_msgs::Object& other) {
+  object = other;
+
+  position.x() = object.pose.pose.position.x;
+  position.y() = object.pose.pose.position.y;
+  position.z() = object.pose.pose.position.z;
+
+  covariance(0,0) = object.pose.covariance[0];
+  covariance(0,1) = object.pose.covariance[1];
+  covariance(0,2) = object.pose.covariance[2];
+  covariance(1,0) = object.pose.covariance[6];
+  covariance(1,1) = object.pose.covariance[7];
+  covariance(1,2) = object.pose.covariance[8];
+  covariance(2,0) = object.pose.covariance[12];
+  covariance(2,1) = object.pose.covariance[13];
+  covariance(2,2) = object.pose.covariance[14];
+
+  return *this;
+}
+
+ObjectPtr Object::transform(tf::Transformer& tf, const std::string& target_frame) const
+{
+  return transform(tf, target_frame, object.header.stamp);
+}
+
+ObjectPtr Object::transform(tf::Transformer& tf, const std::string& target_frame, const ros::Time& target_time) const
+{
+  tf::StampedTransform transform;
+  tf.lookupTransform(target_frame, object.header.frame_id, target_time, transform);
+
+  ObjectPtr result(new Object(*this));
+
+  tf::Pose pose;
+  tf::poseMsgToTF(object.pose.pose, pose);
+
+  // transform pose
+  pose = transform * pose;
+  result->setPose(pose);
+
+  // rotate covariance matrix
+  tf::Matrix3x3 rotation(transform.getBasis());
+  tf::Matrix3x3 cov(covariance(0,0), covariance(0,1), covariance(0,2),
+                    covariance(1,0), covariance(1,1), covariance(1,2),
+                    covariance(2,0), covariance(2,1), covariance(2,2));
+  result->setCovariance(rotation * cov * rotation.transpose());
+
+  // set new frame_id
+  result->object.header.frame_id = target_frame;
+
+  return result;
 }
 
 } // namespace hector_object_tracker

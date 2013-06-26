@@ -48,6 +48,7 @@ ObjectTracker::ObjectTracker()
   modelUpdateSubscriber = worldmodel.subscribe<worldmodel_msgs::ObjectModel>("update", 10, &ObjectTracker::modelUpdateCb, this);
 
   Object::setNamespace(_worldmodel_ns);
+  model.setFrameId(_frame_id);
 
   sysCommandSubscriber = nh.subscribe("syscommand", 10, &ObjectTracker::sysCommandCb, this);
   poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
@@ -97,6 +98,26 @@ ObjectTracker::ObjectTracker()
   setObjectName  = worldmodel.advertiseService("set_object_name", &ObjectTracker::setObjectNameCb, this);
   addObject = worldmodel.advertiseService("add_object", &ObjectTracker::addObjectCb, this);
   getObjectModel = worldmodel.advertiseService("get_object_model", &ObjectTracker::getObjectModelCb, this);
+
+  XmlRpc::XmlRpcValue merge;
+  if (priv_nh.getParam("merge", merge) && merge.getType() == XmlRpc::XmlRpcValue::TypeArray) {
+    for(int i = 0; i < merge.size(); ++i) {
+      MergedModelData &data = *merged_models.insert(merged_models.end(), MergedModelData());
+      ros::SubscribeOptions options = ros::SubscribeOptions::create<worldmodel_msgs::ObjectModel>("", 10, boost::bind(&ObjectTracker::mergeModelCallback, this, _1, data), ros::VoidConstPtr(), 0);
+      if (merge[i].getType() == XmlRpc::XmlRpcValue::TypeStruct && merge[i].hasMember("topic")) {
+        options.topic = static_cast<std::string>(merge[i]["topic"]);
+        if (merge[i].hasMember("prefix")) data.prefix = static_cast<std::string>(merge[i]["prefix"]);
+      } else if (merge[i].getType() == XmlRpc::XmlRpcValue::TypeString) {
+        options.topic = static_cast<std::string>(merge[i]);
+      } else {
+        ROS_ERROR("Each entry in parameter merge must be either a string containing the topic to subscribe or a struct.");
+        continue;
+      }
+      data.subscriber = nh.subscribe(options);
+
+      ROS_INFO("Subscribed to object model %s.", options.topic.c_str());
+    }
+  }
 
   if (_publish_interval > 0.0) {
     publishTimer = nh.createTimer(ros::Duration(_publish_interval), &ObjectTracker::publishModelEvent, this, false, true);
@@ -303,7 +324,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     try {
       tf.waitForTransform(_frame_id, percept->header.frame_id, percept->header.stamp, ros::Duration(1.0));
       tf.lookupTransform(_frame_id, percept->header.frame_id, percept->header.stamp, cameraTransform);
-    } catch (tf::TransformException ex) {
+    } catch (tf::TransformException& ex) {
       ROS_ERROR("%s", ex.what());
       return;
     }
@@ -345,18 +366,8 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
   // find correspondence
   ObjectPtr object;
-  float min_distance = 1.0f;
   if (percept->info.object_id.empty()) {
-    for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
-      ObjectPtr x = *it;
-      if (!percept->info.class_id.empty() && percept->info.class_id != x->getClassId()) continue;
-      Eigen::Vector3f diff = x->getPosition() - position;
-      float distance = (diff.transpose() * (x->getCovariance() + covariance).inverse() * diff)[0];
-      if (distance < min_distance) {
-        object = x;
-        min_distance = distance;
-      }
-    }
+    model.getBestCorrespondence(object, position, covariance, percept->info.class_id, 1.0f);
   } else {
     object = model.getObject(percept->info.object_id);
   }
@@ -608,6 +619,12 @@ bool ObjectTracker::getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& r
   return true;
 }
 
+void ObjectTracker::mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, MergedModelData& data)
+{
+  data.model = *new_model;
+  publishModel();
+}
+
 bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const worldmodel_msgs::ObjectInfo &info, geometry_msgs::Pose &mapped) {
   Parameters::load(info.class_id);
 
@@ -650,7 +667,7 @@ bool ObjectTracker::transformPose(const geometry_msgs::Pose& from, geometry_msgs
   try {
     tf.waitForTransform(_frame_id, header.frame_id, header.stamp, ros::Duration(1.0));
     tf.lookupTransform(_frame_id, header.frame_id, header.stamp, transform);
-  } catch (tf::TransformException ex) {
+  } catch (tf::TransformException& ex) {
     ROS_ERROR("%s", ex.what());
     return false;
   }
@@ -682,12 +699,23 @@ void ObjectTracker::publishModelEvent(const ros::TimerEvent&) {
 }
 
 void ObjectTracker::publishModel() {
+  ObjectModel *published_model = &model;
+
+  // merge with other models from merged_models
+  if (merged_models.size() > 0) {
+    published_model = new ObjectModel(model);
+    for(std::vector<MergedModelData>::iterator it = merged_models.begin(); it != merged_models.end(); ++it)
+    {
+      published_model->mergeWith(it->model, tf);
+    }
+  }
+
   // Publish all model data on topic /objects
-  modelPublisher.publish(model.getObjectModelMessage());
+  modelPublisher.publish(published_model->getObjectModelMessage());
 
   // Visualize victims and covariance in rviz
   visualization_msgs::MarkerArray markers;
-  model.getVisualization(markers);
+  published_model->getVisualization(markers);
 //  drawings.setTime(ros::Time::now());
 //  model.lock();
 //  for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
@@ -699,6 +727,8 @@ void ObjectTracker::publishModel() {
 //  model.unlock();
   drawings.addMarkers(markers);
   drawings.sendAndResetData();
+
+  if (published_model != &model) delete published_model;
 }
 
 } // namespace hector_object_tracker

@@ -12,6 +12,10 @@
 #include <string>
 #include <boost/thread/recursive_mutex.hpp>
 
+#include <Eigen/Core>
+
+#include <tf/transform_listener.h>
+
 namespace hector_object_tracker {
 
 class Object;
@@ -27,12 +31,16 @@ public:
     typedef ObjectList::const_iterator const_iterator;
 
 public:
-    ObjectModel();
+    ObjectModel(const std::string& frame_id = std::string());
+    ObjectModel(const ObjectModel&);
     virtual ~ObjectModel();
 
     ObjectList getObjects() const;
     ObjectList getObjects(const std::string& class_id) const;
     ObjectPtr getObject(const std::string& object_id) const;
+
+    std_msgs::Header getHeader() const;
+    void setFrameId(const std::string &frame_id);
 
     worldmodel_msgs::ObjectModelPtr getObjectModelMessage() const;
     void getVisualization(visualization_msgs::MarkerArray &markers) const;
@@ -49,12 +57,20 @@ public:
     void remove(ObjectPtr object);
     void remove(iterator it);
 
+    ObjectModel &operator=(const ObjectModel& other);
+    ObjectModel &operator=(const worldmodel_msgs::ObjectModel& other);
+
     void lock() const { objectsMutex.lock(); }
     bool try_lock() const { return objectsMutex.try_lock(); }
     void unlock() const { objectsMutex.unlock(); }
 
+    float getBestCorrespondence(ObjectPtr &object, const Eigen::Vector3f& position, const Eigen::Matrix3f& covariance, const std::string& class_id, float max_distance = 0.0) const;
+
+    void mergeWith(const ObjectModel& other, tf::TransformListener& tf, const std::string& prefix = std::string());
+    void merge(const ObjectPtr& other, tf::TransformListener& tf, const std::string& prefix = std::string());
+
 private:
-    ObjectModel(const ObjectModel&);
+    std_msgs::Header header;
     ObjectList objects;
     mutable boost::recursive_mutex objectsMutex;
 };

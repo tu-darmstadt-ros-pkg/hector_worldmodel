@@ -25,6 +25,7 @@ public:
   ObjectTracker();
   virtual ~ObjectTracker();
 
+protected:
   void sysCommandCb(const std_msgs::StringConstPtr &);
   void imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &);
   void posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &);
@@ -79,6 +80,14 @@ private:
   ObjectModel model;
   typedef boost::shared_ptr<image_geometry::PinholeCameraModel> CameraModelPtr;
   std::map<std::string,CameraModelPtr> cameraModels;
+
+  struct MergedModelData {
+    std::string prefix;
+    ObjectModel model;
+    ros::Subscriber subscriber;
+  };
+  std::vector<MergedModelData> merged_models;
+  void mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, MergedModelData& model);
 
   std::string _frame_id;
   std::string _worldmodel_ns;
