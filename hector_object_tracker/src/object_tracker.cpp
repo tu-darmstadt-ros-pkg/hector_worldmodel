@@ -50,7 +50,7 @@ ObjectTracker::ObjectTracker()
   Object::setNamespace(_worldmodel_ns);
   model.setFrameId(_frame_id);
 
-  sysCommandSubscriber = nh.subscribe("syscommand", 10, &ObjectTracker::sysCommandCb, this);
+  sysCommandSubscriber = nh.subscribe("/syscommand", 10, &ObjectTracker::sysCommandCb, this);
   poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
   pointDebugPublisher = priv_nh.advertise<geometry_msgs::PointStamped>("point", 10, false);
 
@@ -102,18 +102,18 @@ ObjectTracker::ObjectTracker()
   XmlRpc::XmlRpcValue merge;
   if (priv_nh.getParam("merge", merge) && merge.getType() == XmlRpc::XmlRpcValue::TypeArray) {
     for(int i = 0; i < merge.size(); ++i) {
-      MergedModelData &data = *merged_models.insert(merged_models.end(), MergedModelData());
+      const MergedModelPtr& data = *merged_models.insert(merged_models.end(), boost::make_shared<MergedModelData>());
       ros::SubscribeOptions options = ros::SubscribeOptions::create<worldmodel_msgs::ObjectModel>("", 10, boost::bind(&ObjectTracker::mergeModelCallback, this, _1, data), ros::VoidConstPtr(), 0);
       if (merge[i].getType() == XmlRpc::XmlRpcValue::TypeStruct && merge[i].hasMember("topic")) {
         options.topic = static_cast<std::string>(merge[i]["topic"]);
-        if (merge[i].hasMember("prefix")) data.prefix = static_cast<std::string>(merge[i]["prefix"]);
+        if (merge[i].hasMember("prefix")) data->prefix = static_cast<std::string>(merge[i]["prefix"]);
       } else if (merge[i].getType() == XmlRpc::XmlRpcValue::TypeString) {
         options.topic = static_cast<std::string>(merge[i]);
       } else {
         ROS_ERROR("Each entry in parameter merge must be either a string containing the topic to subscribe or a struct.");
         continue;
       }
-      data.subscriber = nh.subscribe(options);
+      data->subscriber = nh.subscribe(options);
 
       ROS_INFO("Subscribed to object model %s.", options.topic.c_str());
     }
@@ -615,13 +615,13 @@ bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, wo
 }
 
 bool ObjectTracker::getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& request, worldmodel_msgs::GetObjectModel::Response& response) {
-  response.model = *(model.getObjectModelMessage());
+  response.model = *(getMergedModel().getObjectModelMessage());
   return true;
 }
 
-void ObjectTracker::mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, MergedModelData& data)
+void ObjectTracker::mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& data)
 {
-  data.model = *new_model;
+  data->model = *new_model;
   publishModel();
 }
 
@@ -694,28 +694,35 @@ bool ObjectTracker::transformPose(const geometry_msgs::PoseWithCovariance& from,
   return true;
 }
 
+ObjectModel ObjectTracker::getMergedModel()
+{
+  if (merged_models.size() == 0) return model;
+
+  ROS_DEBUG("Merging object models from %lu sources.", merged_models.size());
+
+  // merge with other models from merged_models
+  ObjectModel merged(model);
+  for(std::vector<MergedModelPtr>::iterator it = merged_models.begin(); it != merged_models.end(); ++it)
+  {
+    merged.mergeWith((*it)->model, tf, (*it)->prefix);
+  }
+
+  return merged;
+}
+
 void ObjectTracker::publishModelEvent(const ros::TimerEvent&) {
   publishModel();
 }
 
 void ObjectTracker::publishModel() {
-  ObjectModel *published_model = &model;
-
-  // merge with other models from merged_models
-  if (merged_models.size() > 0) {
-    published_model = new ObjectModel(model);
-    for(std::vector<MergedModelData>::iterator it = merged_models.begin(); it != merged_models.end(); ++it)
-    {
-      published_model->mergeWith(it->model, tf);
-    }
-  }
+  ObjectModel merged_model = getMergedModel();
 
   // Publish all model data on topic /objects
-  modelPublisher.publish(published_model->getObjectModelMessage());
+  modelPublisher.publish(merged_model.getObjectModelMessage());
 
   // Visualize victims and covariance in rviz
   visualization_msgs::MarkerArray markers;
-  published_model->getVisualization(markers);
+  merged_model.getVisualization(markers);
 //  drawings.setTime(ros::Time::now());
 //  model.lock();
 //  for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
@@ -727,8 +734,6 @@ void ObjectTracker::publishModel() {
 //  model.unlock();
   drawings.addMarkers(markers);
   drawings.sendAndResetData();
-
-  if (published_model != &model) delete published_model;
 }
 
 } // namespace hector_object_tracker

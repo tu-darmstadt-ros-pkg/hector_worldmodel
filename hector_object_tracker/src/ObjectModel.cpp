@@ -103,6 +103,7 @@ void ObjectModel::remove(iterator it) {
 }
 ObjectModel& ObjectModel::operator =(const ObjectModel& other)
 {
+  header = other.header;
   objects = other.objects;
   return *this;
 }
@@ -179,11 +180,13 @@ void ObjectModel::merge(const ObjectPtr& object, tf::TransformListener &tf, cons
   float distance = getBestCorrespondence(mine, transformed->getPosition(), transformed->getCovariance(), object->getClassId());
   if (distance < 1.0) {
     // found corresondence
+    ROS_DEBUG("Merging %s and %s", mine->getObjectId().c_str(), object->getObjectId().c_str());
     mine->setObjectId(mine->getObjectId() + "," + prefix + object->getObjectId());
     mine->update(transformed->getPosition(), transformed->getCovariance(), object->getSupport());
 
   } else {
     // add as new object
+    ROS_DEBUG("Adding %s", transformed->getObjectId().c_str());
     transformed->setObjectId(prefix + object->getObjectId());
     add(transformed);
   }

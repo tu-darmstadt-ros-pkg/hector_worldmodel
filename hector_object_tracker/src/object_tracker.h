@@ -41,6 +41,8 @@ protected:
   ObjectModel& getModel()             { return model; }
   const ObjectModel& getModel() const { return model; }
 
+  ObjectModel getMergedModel();
+
   void publishModelEvent(const ros::TimerEvent&);
   void publishModel();
 
@@ -86,8 +88,9 @@ private:
     ObjectModel model;
     ros::Subscriber subscriber;
   };
-  std::vector<MergedModelData> merged_models;
-  void mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, MergedModelData& model);
+  typedef boost::shared_ptr<MergedModelData> MergedModelPtr;
+  std::vector<MergedModelPtr> merged_models;
+  void mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& data);
 
   std::string _frame_id;
   std::string _worldmodel_ns;
