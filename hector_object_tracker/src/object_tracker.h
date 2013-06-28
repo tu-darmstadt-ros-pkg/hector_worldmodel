@@ -10,6 +10,7 @@
 #include <worldmodel_msgs/SetObjectName.h>
 #include <worldmodel_msgs/AddObject.h>
 #include <worldmodel_msgs/GetObjectModel.h>
+#include <sensor_msgs/CameraInfo.h>
 
 #include <tf/transform_listener.h>
 #include <image_geometry/pinhole_camera_model.h>
@@ -59,6 +60,19 @@ private:
   ros::Subscriber sysCommandSubscriber;
   ros::Subscriber objectAgeingSubscriber;
 
+  struct NegativeUpdateInfo {
+    std::string class_id;
+    worldmodel_msgs::ObjectInfo::_support_type negative_support;
+    float min_distance;
+    float max_distance;
+    float ignore_border_pixels;
+    ros::Duration not_seen_duration;
+    ros::Subscriber subscriber;
+  };
+  typedef boost::shared_ptr<NegativeUpdateInfo> NegativeUpdatePtr;
+  std::vector<NegativeUpdatePtr> negativeUpdate;
+  void negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr &, const NegativeUpdatePtr& info);
+
   ros::Publisher modelPublisher;
   ros::Publisher modelUpdatePublisher;
   ros::Publisher poseDebugPublisher;
@@ -82,15 +96,16 @@ private:
   ObjectModel model;
   typedef boost::shared_ptr<image_geometry::PinholeCameraModel> CameraModelPtr;
   std::map<std::string,CameraModelPtr> cameraModels;
+  ObjectTracker::CameraModelPtr getCameraModel(const std::string& frame_id, const sensor_msgs::CameraInfo& camera_info);
 
-  struct MergedModelData {
+  struct MergedModelInfo {
     std::string prefix;
     ObjectModel model;
     ros::Subscriber subscriber;
   };
-  typedef boost::shared_ptr<MergedModelData> MergedModelPtr;
+  typedef boost::shared_ptr<MergedModelInfo> MergedModelPtr;
   std::vector<MergedModelPtr> merged_models;
-  void mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& data);
+  void mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& info);
 
   std::string _frame_id;
   std::string _worldmodel_ns;

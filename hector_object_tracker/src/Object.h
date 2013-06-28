@@ -3,6 +3,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <worldmodel_msgs/Object.h>
+#include <worldmodel_msgs/constants/ObjectState.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_listener.h>
 
@@ -90,9 +91,7 @@ public:
       return this->state.state;
     }
 
-    void setState(const StateType& state) {
-      this->state.state = state;
-    }
+    void setState(const StateType& state);
 
     const std::string& getName() const {
       return this->info.name;

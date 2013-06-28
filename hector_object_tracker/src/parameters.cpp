@@ -46,6 +46,8 @@ std::map<std::string, double> _pending_support;
 std::map<std::string, double> _pending_time;
 std::map<std::string, double> _active_support;
 std::map<std::string, double> _active_time;
+std::map<std::string, double> _inactive_support;
+std::map<std::string, double> _inactive_time;
 std::map<std::string, std_msgs::ColorRGBA> _marker_color;
 std::map<std::string, ros::ServiceClient> _distance_to_obstacle_service;
 
@@ -81,6 +83,10 @@ namespace Parameters {
       priv_nh.getParam(prefix + "active_support", _active_support[class_id]);
     if (priv_nh.hasParam(prefix + "active_time"))
       priv_nh.getParam(prefix + "active_time", _active_time[class_id]);
+    if (priv_nh.hasParam(prefix + "inactive_support"))
+      priv_nh.getParam(prefix + "inactive_support", _inactive_support[class_id]);
+    if (priv_nh.hasParam(prefix + "inactive_time"))
+      priv_nh.getParam(prefix + "inactive_time", _inactive_time[class_id]);
 
     if (priv_nh.hasParam(prefix + "marker_color")) {
       XmlRpc::XmlRpcValue color;

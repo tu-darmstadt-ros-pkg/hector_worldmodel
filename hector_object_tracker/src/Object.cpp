@@ -156,6 +156,11 @@ void Object::setCovariance(const geometry_msgs::PoseWithCovariance::_covariance_
                       covariance[12], covariance[13], covariance[14];
 }
 
+void Object::setState(const StateType& state) {
+  ROS_INFO("Setting object state for %s to %s", getObjectId().c_str(), getObjectStateString(state));
+  this->state.state = state;
+}
+
 void Object::intersect(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& covarianceB, float support) {
   // old cov/covariance is A , new cov/covIn is B
   float omega = 0.5f;

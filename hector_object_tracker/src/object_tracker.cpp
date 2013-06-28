@@ -31,6 +31,8 @@ ObjectTracker::ObjectTracker()
   param(_pending_time)      = 0.0;
   param(_active_support)    = 0.0;
   param(_active_time)       = 0.0;
+  param(_inactive_support)  = 0.0;
+  param(_inactive_time)     = 0.0;
 
   std_msgs::ColorRGBA default_color;
   default_color.r = 0.8; default_color.a = 1.0;
@@ -101,20 +103,52 @@ ObjectTracker::ObjectTracker()
   XmlRpc::XmlRpcValue merge;
   if (priv_nh.getParam("merge", merge) && merge.getType() == XmlRpc::XmlRpcValue::TypeArray) {
     for(int i = 0; i < merge.size(); ++i) {
-      const MergedModelPtr& data = *merged_models.insert(merged_models.end(), boost::make_shared<MergedModelData>());
-      ros::SubscribeOptions options = ros::SubscribeOptions::create<worldmodel_msgs::ObjectModel>("", 10, boost::bind(&ObjectTracker::mergeModelCallback, this, _1, data), ros::VoidConstPtr(), 0);
+      const MergedModelPtr& info = *merged_models.insert(merged_models.end(), boost::make_shared<MergedModelInfo>());
+      ros::SubscribeOptions options = ros::SubscribeOptions::create<worldmodel_msgs::ObjectModel>(std::string(), 10, boost::bind(&ObjectTracker::mergeModelCallback, this, _1, info), ros::VoidConstPtr(), 0);
       if (merge[i].getType() == XmlRpc::XmlRpcValue::TypeStruct && merge[i].hasMember("topic")) {
         options.topic = static_cast<std::string>(merge[i]["topic"]);
-        if (merge[i].hasMember("prefix")) data->prefix = static_cast<std::string>(merge[i]["prefix"]);
+        if (merge[i].hasMember("prefix")) info->prefix = static_cast<std::string>(merge[i]["prefix"]);
       } else if (merge[i].getType() == XmlRpc::XmlRpcValue::TypeString) {
         options.topic = static_cast<std::string>(merge[i]);
-      } else {
+      }
+
+      if (options.topic.empty()) {
         ROS_ERROR("Each entry in parameter merge must be either a string containing the topic to subscribe or a struct.");
         continue;
       }
-      data->subscriber = nh.subscribe(options);
+      info->subscriber = nh.subscribe(options);
 
       ROS_INFO("Subscribed to object model %s.", options.topic.c_str());
+    }
+  }
+
+  XmlRpc::XmlRpcValue negative_update;
+  if (priv_nh.getParam("negative_update", negative_update) && negative_update.getType() == XmlRpc::XmlRpcValue::TypeArray) {
+    for(int i = 0; i < negative_update.size(); ++i) {
+      if (negative_update[i].getType() != XmlRpc::XmlRpcValue::TypeStruct) continue;
+      const NegativeUpdatePtr& info = *negativeUpdate.insert(negativeUpdate.end(), boost::make_shared<NegativeUpdateInfo>());
+
+      // default options
+      info->negative_support = 0.0;
+      info->min_distance = 0.0;
+      info->max_distance = 0.0;
+      info->ignore_border_pixels = 0.0;
+      info->not_seen_duration = ros::Duration(0.5);
+
+      ros::SubscribeOptions options = ros::SubscribeOptions::create<sensor_msgs::CameraInfo>(std::string(), 10, boost::bind(&ObjectTracker::negativeUpdateCallback, this, _1, info), ros::VoidConstPtr(), 0);
+      if (negative_update[i].hasMember("topic"))                options.topic = static_cast<std::string>(negative_update[i]["topic"]);
+      if (negative_update[i].hasMember("class_id"))             info->class_id = static_cast<std::string>(negative_update[i]["topic"]);
+      if (negative_update[i].hasMember("negative_support"))     info->negative_support = static_cast<double>(negative_update[i]["negative_support"]);
+      if (negative_update[i].hasMember("min_distance"))         info->min_distance = static_cast<double>(negative_update[i]["min_distance"]);
+      if (negative_update[i].hasMember("max_distance"))         info->max_distance = static_cast<double>(negative_update[i]["max_distance"]);
+      if (negative_update[i].hasMember("ignore_border_pixels")) info->ignore_border_pixels = static_cast<double>(negative_update[i]["ignore_border_pixels"]);
+      if (negative_update[i].hasMember("not_seen_duration"))    info->not_seen_duration = ros::Duration(static_cast<double>(negative_update[i]["not_seen_duration"]));
+
+      if (options.topic.empty()) {
+        ROS_ERROR("Each entry in parameter negative_update must have a camera_info topic to subscribe to.");
+        continue;
+      }
+      info->subscriber = nh.subscribe(options);
     }
   }
 
@@ -132,6 +166,9 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
     ROS_INFO("Resetting object model.");
     model.reset();
     drawings.reset();
+    for(std::vector<MergedModelPtr>::const_iterator it =  merged_models.begin(); it != merged_models.end(); ++it) {
+      (*it)->model.reset();
+    }
   }
 }
 
@@ -151,17 +188,7 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   float distance = percept->distance > 0.0 ? percept->distance : param(_default_distance, percept->info.class_id);
 
   // retrieve camera model from either the cache or from CameraInfo given in the percept
-  CameraModelPtr cameraModel;
-  if (cameraModels.count(percept->header.frame_id) == 0) {
-    cameraModel.reset(new image_geometry::PinholeCameraModel());
-    if (!cameraModel->fromCameraInfo(percept->camera_info)) {
-      ROS_ERROR("Could not initialize camera model from CameraInfo given in the percept");
-      return;
-    }
-    cameraModels[percept->header.frame_id] = cameraModel;
-  } else {
-    cameraModel = cameraModels[percept->header.frame_id];
-  }
+  CameraModelPtr cameraModel = getCameraModel(percept->header.frame_id, percept->camera_info);
 
   // transform Point using the camera mode
   cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(percept->x, percept->y));
@@ -398,16 +425,14 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   }
 
   // update object state
-  if (object->getState() == worldmodel_msgs::ObjectState::UNKNOWN &&  param(_pending_support, percept->info.class_id) > 0) {
+  if (object->getState() == ObjectState::UNKNOWN &&  param(_pending_support, percept->info.class_id) > 0) {
     if (object->getSupport() >= param(_pending_support, percept->info.class_id) && (percept->header.stamp - object->getHeader().stamp).toSec() >= param(_pending_time, percept->info.class_id)) {
-      ROS_INFO("Setting object state for %s to PENDING", object->getObjectId().c_str());
-      object->setState(worldmodel_msgs::ObjectState::PENDING);
+      object->setState(ObjectState::PENDING);
     }
   }
-  if (object->getState() == worldmodel_msgs::ObjectState::PENDING &&  param(_active_support, percept->info.class_id) > 0) {
+  if (object->getState() == ObjectState::PENDING &&  param(_active_support, percept->info.class_id) > 0) {
     if (object->getSupport() >= param(_active_support, percept->info.class_id) && (percept->header.stamp - object->getHeader().stamp).toSec() >= param(_active_time, percept->info.class_id)) {
-      ROS_INFO("Setting object state for %s to ACTIVE", object->getObjectId().c_str());
-      object->setState(worldmodel_msgs::ObjectState::ACTIVE);
+      object->setState(ObjectState::ACTIVE);
     }
   }
 
@@ -417,7 +442,8 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   object->setOrientation(object_orientation);
 
   // update object header
-  std_msgs::Header header = percept->header;
+  std_msgs::Header header;
+  header.stamp    = percept->header.stamp;
   header.frame_id = _frame_id;
   object->setHeader(header);
 
@@ -429,8 +455,8 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
   // call object verification
   if (verificationServices.count("object") > 0) {
-    worldmodel_msgs::VerifyObject::Request request;
-    worldmodel_msgs::VerifyObject::Response response;
+    VerifyObject::Request request;
+    VerifyObject::Response response;
 
     object->getMessage(request.object);
 
@@ -447,7 +473,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
       } else if (it->first.call(request, response)) {
         if (response.response == response.DISCARD) {
           ROS_DEBUG("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->first.getService().c_str());
-          object->setState(worldmodel_msgs::ObjectState::DISCARDED);
+          object->setState(ObjectState::DISCARDED);
         }
         if (response.response == response.CONFIRM) {
           ROS_DEBUG("We got a CONFIRMation for object %s from service %s!", object->getObjectId().c_str(), it->first.getService().c_str());
@@ -458,7 +484,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
         }
       } else if (it->second.hasMember("required") && it->second["required"]) {
         ROS_DEBUG("Discarded object %s as required service %s is not available", object->getObjectId().c_str(), it->first.getService().c_str());
-        object->setState(worldmodel_msgs::ObjectState::DISCARDED);
+        object->setState(ObjectState::DISCARDED);
       }
     }
   }
@@ -475,6 +501,23 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
   modelUpdatePublisher.publish(object->getMessage());
   publishModel();
+}
+
+ObjectTracker::CameraModelPtr ObjectTracker::getCameraModel(const std::string& frame_id, const sensor_msgs::CameraInfo& camera_info) {
+  // retrieve camera model from either the cache or from CameraInfo given in the percept
+  CameraModelPtr cameraModel;
+  if (cameraModels.count(frame_id) == 0) {
+    cameraModel.reset(new image_geometry::PinholeCameraModel());
+    if (!cameraModel->fromCameraInfo(camera_info)) {
+      ROS_ERROR("Could not initialize camera model from CameraInfo given in the percept");
+      return CameraModelPtr();
+    }
+    cameraModels[frame_id] = cameraModel;
+  } else {
+    cameraModel = cameraModels[frame_id];
+  }
+
+  return cameraModel;
 }
 
 void ObjectTracker::objectAgeingCb(const std_msgs::Float32ConstPtr &ageing) {
@@ -617,13 +660,84 @@ bool ObjectTracker::getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& r
   return true;
 }
 
-void ObjectTracker::mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& data)
+void ObjectTracker::mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& info)
 {
-  data->model = *new_model;
+  info->model = *new_model;
   publishModel();
 }
 
-bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const worldmodel_msgs::ObjectInfo &info, geometry_msgs::Pose &mapped) {
+void ObjectTracker::negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr &camera_info, const NegativeUpdatePtr& info)
+{
+  model.lock();
+
+  // retrieve camera model from either the cache or from CameraInfo given in the percept
+  CameraModelPtr cameraModel = getCameraModel(camera_info->header.frame_id, *camera_info);
+
+  // get camera transform
+  tf::StampedTransform cameraInverseTransform;
+  try {
+    tf.waitForTransform(camera_info->header.frame_id, _frame_id, camera_info->header.stamp, ros::Duration(1.0));
+    tf.lookupTransform(camera_info->header.frame_id, _frame_id, camera_info->header.stamp, cameraInverseTransform);
+  } catch (tf::TransformException& ex) {
+    ROS_ERROR("%s", ex.what());
+    return;
+  }
+
+  // iterate through objects
+  for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
+    const ObjectPtr& object = *it;
+
+    // do not update objects with state < 0
+    if (object->getState() < 0) continue;
+
+    // check class_id
+    if (!info->class_id.empty() && info->class_id != object->getClassId()) {
+      continue;
+    }
+
+    // check last seen stamp
+    if (object->getStamp() >= camera_info->header.stamp - info->not_seen_duration) {
+      continue;
+    }
+
+    // transform object pose to camera coordinates
+    tf::Pose pose;
+    object->getPose(pose);
+    pose = cameraInverseTransform * pose;
+    cv::Point3d xyz(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
+
+    // check distance
+    float distance = pose.getOrigin().length();
+    if (distance < info->min_distance || (info->max_distance > 0.0 && distance > info->max_distance)) {
+      continue;
+    }
+
+    // get image point
+    cv::Point2d point = cameraModel->project3dToPixel(xyz);
+
+    // check if object is within field of view
+    if (point.x > 0 + info->ignore_border_pixels &&
+        point.x < camera_info->width - info->ignore_border_pixels &&
+        point.y > 0 + info->ignore_border_pixels &&
+        point.y < camera_info->height - info->ignore_border_pixels) {
+
+      // ==> do negative update
+      ROS_DEBUG("Doing negative update of %s. Should be at image coordinates (%f,%f).", object->getObjectId().c_str(), point.x, point.y);
+      object->addSupport(-info->negative_support);
+      if (object->getSupport() <= param(_inactive_support, info->class_id)) {
+        object->setState(ObjectState::INACTIVE);
+      }
+
+      // publish object update
+      modelUpdatePublisher.publish(object->getMessage());
+    }
+  }
+  model.unlock();
+
+  // publishModel();
+}
+
+bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const ObjectInfo &info, geometry_msgs::Pose &mapped) {
   Parameters::load(info.class_id);
 
   if (!param(_distance_to_obstacle_service, info.class_id).exists()) {
