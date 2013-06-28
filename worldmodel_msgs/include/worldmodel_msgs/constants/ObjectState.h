@@ -33,16 +33,16 @@
 
 namespace worldmodel_msgs {
 
-const char *getObjectStateString(const ObjectState::_state_type& state)
+static inline const char *getObjectStateString(const ObjectState::_state_type& state)
 {
   switch(state) {
-    case UNKNOWN:     return "UNKNWON";
-    case PENDING:     return "PENDING";
-    case ACTIVE:      return "ACTIVE";
-    case INACTIVE:    return "INACTIVE";
-    case CONFIRMED:   return "CONFIRMED";
-    case DISCARDED:   return "DISCARDED";
-    case APPROACHING: return "APPROACHING";
+    case ObjectState::UNKNOWN:     return "UNKNWON";
+    case ObjectState::PENDING:     return "PENDING";
+    case ObjectState::ACTIVE:      return "ACTIVE";
+    case ObjectState::INACTIVE:    return "INACTIVE";
+    case ObjectState::CONFIRMED:   return "CONFIRMED";
+    case ObjectState::DISCARDED:   return "DISCARDED";
+    case ObjectState::APPROACHING: return "APPROACHING";
     default: return "";
   }
 }
