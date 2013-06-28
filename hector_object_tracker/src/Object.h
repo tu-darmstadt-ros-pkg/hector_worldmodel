@@ -6,13 +6,15 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_listener.h>
 
-#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <ros/ros.h>
 
 #include <map>
 
 namespace hector_object_tracker {
+
+using namespace worldmodel_msgs;
 
 class Object;
 typedef boost::shared_ptr<Object> ObjectPtr;
@@ -25,7 +27,7 @@ public:
 
     typedef boost::shared_ptr<Object> Ptr;
     typedef boost::shared_ptr<Object const> ConstPtr;
-    typedef worldmodel_msgs::ObjectState::_state_type State;
+    typedef worldmodel_msgs::ObjectState::_state_type StateType;
 
     Object(const std::string class_id = "", const std::string object_id = "");
     Object(const worldmodel_msgs::Object& other);
@@ -33,82 +35,83 @@ public:
 
     static void reset();
 
-    const worldmodel_msgs::Object& getObjectMessage() const {
-      return object;
-    }
-
+    void getMessage(worldmodel_msgs::Object& object) const;
+    worldmodel_msgs::Object getMessage() const;
     void getVisualization(visualization_msgs::MarkerArray &markers) const;
 
-    const geometry_msgs::PoseWithCovariance& getPoseWithCovariance() const { return object.pose; }
+    void getPoseWithCovariance(geometry_msgs::PoseWithCovariance& pose) const;
     void setPose(const geometry_msgs::PoseWithCovariance& pose);
 
-    const geometry_msgs::Pose& getPose() const { return object.pose.pose; }
+    void getPose(geometry_msgs::Pose& pose) const;
+    void getPose(tf::Pose& pose) const;
     void setPose(const geometry_msgs::Pose& pose);
     void setPose(const tf::Pose& pose);
 
+    const Eigen::Vector3f& getPosition() const;
+    void setPosition(const Eigen::Vector3f& position);
     void setPosition(const geometry_msgs::Point& position);
     void setPosition(const tf::Point& point);
 
+    const Eigen::Quaternionf& getOrientation() const;
     void setOrientation(const geometry_msgs::Quaternion& orientation);
     void setOrientation(const tf::Quaternion& orientation);
 
-    const Eigen::Vector3f& getPosition() const;
-    void setPosition(const Eigen::Vector3f& position);
-
     const Eigen::Matrix3f& getCovariance() const;
+    void getCovariance(geometry_msgs::PoseWithCovariance::_covariance_type& covariance) const;
     void setCovariance(const Eigen::Matrix3f& covariance);
     void setCovariance(const tf::Matrix3x3& covariance);
+    void setCovariance(const geometry_msgs::PoseWithCovariance::_covariance_type& covariance);
 
     const std::string& getClassId() const {
-      return object.info.class_id;
+      return this->info.class_id;
     }
 
     const std::string& getObjectId() const {
-      return object.info.object_id;
+      return this->info.object_id;
     }
 
     void setObjectId(const std::string& object_id) {
-      object.info.object_id = object_id;
+      this->info.object_id = object_id;
     }
 
     float getSupport() const {
-      return object.info.support;
+      return this->info.support;
     }
 
     void setSupport(float support) {
-      object.info.support = support;
+      this->info.support = support;
     }
 
     void addSupport(float support) {
-      object.info.support += support;
+      this->info.support += support;
     }
 
-    State getState() const {
-      return object.state.state;
+    StateType getState() const {
+      return this->state.state;
     }
 
-    void setState(const State& state) {
-      object.state.state = state;
+    void setState(const StateType& state) {
+      this->state.state = state;
     }
 
     const std::string& getName() const {
-      return object.info.name;
+      return this->info.name;
     }
 
     void setName(const std::string& name) {
-      object.info.name = name;
+      this->info.name = name;
     }
 
     std_msgs::Header getHeader() const {
-      return object.header;
+      return this->header;
     }
 
     void setHeader(const std_msgs::Header &header) {
-      object.header = header;
+      this->header = header;
     }
 
     ros::Time getStamp() const {
-      return object.header.stamp;
+      return this->header.stamp;
     }
 
     void intersect(const Eigen::Vector3f& position, const Eigen::Matrix3f& covariance, float support);
@@ -123,16 +126,17 @@ public:
 
 private:
     ros::NodeHandle nh;
-    worldmodel_msgs::Object object;
+    std_msgs::Header header;
+    ObjectInfo info;
+    ObjectState state;
 
     Eigen::Vector3f position;
+    Eigen::Quaternionf orientation;
     Eigen::Matrix3f covariance;
 
     static std::map<std::string,unsigned int> object_count;
     static std::string object_namespace;
 };
-
-typedef Object::State ObjectState;
 
 } // namespace hector_object_tracker
 

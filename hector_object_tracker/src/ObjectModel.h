@@ -12,7 +12,7 @@
 #include <string>
 #include <boost/thread/recursive_mutex.hpp>
 
-#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <tf/transform_listener.h>
 
@@ -42,7 +42,8 @@ public:
     std_msgs::Header getHeader() const;
     void setFrameId(const std::string &frame_id);
 
-    worldmodel_msgs::ObjectModelPtr getObjectModelMessage() const;
+    void getMessage(worldmodel_msgs::ObjectModel& model) const;
+    worldmodel_msgs::ObjectModelPtr getMessage() const;
     void getVisualization(visualization_msgs::MarkerArray &markers) const;
     void reset();
 

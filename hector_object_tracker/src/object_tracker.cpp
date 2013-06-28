@@ -4,7 +4,6 @@
 #include <worldmodel_msgs/VerifyObject.h>
 #include <worldmodel_msgs/VerifyPercept.h>
 
-#include <Eigen/Geometry>
 #include <math.h>
 
 #include "Object.h"
@@ -433,7 +432,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
     worldmodel_msgs::VerifyObject::Request request;
     worldmodel_msgs::VerifyObject::Response response;
 
-    request.object = object->getObjectMessage();
+    object->getMessage(request.object);
 
     std::vector<VerificationService> services(verificationServices["object"]["*"]);
     if (!object->getClassId().empty()) {
@@ -467,12 +466,14 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   // publish point in target frame for debugging purposes
   if (pointDebugPublisher.getNumSubscribers() > 0) {
     geometry_msgs::PointStamped point;
-    point.point = object->getPose().position;
+    geometry_msgs::Pose pose;
+    object->getPose(pose);
+    point.point = pose.position;
     point.header = object->getHeader();
     pointDebugPublisher.publish(point);
   }
 
-  modelUpdatePublisher.publish(object->getObjectMessage());
+  modelUpdatePublisher.publish(object->getMessage());
   publishModel();
 }
 
@@ -528,7 +529,7 @@ bool ObjectTracker::setObjectStateCb(worldmodel_msgs::SetObjectState::Request& r
   }
 
   object->setState(request.new_state.state);
-  modelUpdatePublisher.publish(object->getObjectMessage());
+  modelUpdatePublisher.publish(object->getMessage());
 
   model.unlock();
   publishModel();
@@ -545,7 +546,7 @@ bool ObjectTracker::setObjectNameCb(worldmodel_msgs::SetObjectName::Request& req
   }
 
   object->setName(request.name);
-  modelUpdatePublisher.publish(object->getObjectMessage());
+  modelUpdatePublisher.publish(object->getMessage());
 
   model.unlock();
   publishModel();
@@ -583,13 +584,10 @@ bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, wo
     pose = request.object.pose;
   }
 
-  // extract variance matrix
-  Eigen::Matrix<float,6,6> temp;
-  for(unsigned int i = 0; i < 36; ++i) temp(i) = pose.covariance[i];
-  Eigen::Matrix3f covariance = temp.block<3,3>(0,0);
-
   // if no variance is given, set variance to default
-  if (covariance.isZero()) {
+  if (pose.covariance[0] == 0  && pose.covariance[7] == 0  && pose.covariance[14] == 0 &&
+      pose.covariance[21] == 0 && pose.covariance[28] == 0 && pose.covariance[35] == 0) {
+    pose.covariance.assign(0.0);
     pose.covariance[0] = 1.0;
     pose.covariance[7] = 1.0;
     pose.covariance[14] = 1.0;
@@ -605,7 +603,7 @@ bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, wo
   object->setSupport(request.object.info.support);
 
   if (newObject) model.add(object);
-  response.object = object->getObjectMessage();
+  object->getMessage(request.object);
   modelUpdatePublisher.publish(response.object);
 
   model.unlock();
@@ -615,7 +613,7 @@ bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, wo
 }
 
 bool ObjectTracker::getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& request, worldmodel_msgs::GetObjectModel::Response& response) {
-  response.model = *(getMergedModel().getObjectModelMessage());
+  getMergedModel().getMessage(response.model);
   return true;
 }
 
@@ -718,7 +716,7 @@ void ObjectTracker::publishModel() {
   ObjectModel merged_model = getMergedModel();
 
   // Publish all model data on topic /objects
-  modelPublisher.publish(merged_model.getObjectModelMessage());
+  modelPublisher.publish(merged_model.getMessage());
 
   // Visualize victims and covariance in rviz
   visualization_msgs::MarkerArray markers;

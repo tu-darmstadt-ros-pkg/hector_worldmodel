@@ -1,8 +1,6 @@
 #include "ObjectModel.h"
 #include "Object.h"
 
-#include <Eigen/Geometry>
-
 namespace hector_object_tracker {
 
 ObjectModel::ObjectModel(const std::string& frame_id)
@@ -60,16 +58,20 @@ void ObjectModel::setFrameId(const std::string &frame_id) {
   header.frame_id = frame_id;
 }
 
-worldmodel_msgs::ObjectModelPtr ObjectModel::getObjectModelMessage() const {
+void ObjectModel::getMessage(worldmodel_msgs::ObjectModel& model) const {
   boost::recursive_mutex::scoped_lock lock(objectsMutex);
-  worldmodel_msgs::ObjectModelPtr model(new worldmodel_msgs::ObjectModel());
 
-  model->header = getHeader();
-  model->objects.reserve(objects.size());
+  model.header = getHeader();
+  model.objects.clear();
+  model.objects.reserve(objects.size());
   for(ObjectList::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-    model->objects.push_back((*it)->getObjectMessage());
+    model.objects.push_back((*it)->getMessage());
   }
+}
 
+worldmodel_msgs::ObjectModelPtr ObjectModel::getMessage() const {
+  worldmodel_msgs::ObjectModelPtr model(new worldmodel_msgs::ObjectModel());
+  getMessage(*model);
   return model;
 }
 
