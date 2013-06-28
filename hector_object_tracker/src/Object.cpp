@@ -157,6 +157,7 @@ void Object::setCovariance(const geometry_msgs::PoseWithCovariance::_covariance_
 }
 
 void Object::setState(const StateType& state) {
+  if (this->state.state == state) return;
   ROS_INFO("Setting object state for %s to %s", getObjectId().c_str(), getObjectStateString(state));
   this->state.state = state;
 }
