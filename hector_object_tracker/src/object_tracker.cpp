@@ -137,7 +137,7 @@ ObjectTracker::ObjectTracker()
 
       ros::SubscribeOptions options = ros::SubscribeOptions::create<sensor_msgs::CameraInfo>(std::string(), 10, boost::bind(&ObjectTracker::negativeUpdateCallback, this, _1, info), ros::VoidConstPtr(), 0);
       if (negative_update[i].hasMember("topic"))                options.topic = static_cast<std::string>(negative_update[i]["topic"]);
-      if (negative_update[i].hasMember("class_id"))             info->class_id = static_cast<std::string>(negative_update[i]["topic"]);
+      if (negative_update[i].hasMember("class_id"))             info->class_id = static_cast<std::string>(negative_update[i]["class_id"]);
       if (negative_update[i].hasMember("negative_support"))     info->negative_support = static_cast<double>(negative_update[i]["negative_support"]);
       if (negative_update[i].hasMember("min_distance"))         info->min_distance = static_cast<double>(negative_update[i]["min_distance"]);
       if (negative_update[i].hasMember("max_distance"))         info->max_distance = static_cast<double>(negative_update[i]["max_distance"]);
@@ -437,9 +437,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   }
 
   // set object orientation
-  geometry_msgs::Quaternion object_orientation;
-  tf::quaternionTFToMsg(pose.getRotation(), object_orientation);
-  object->setOrientation(object_orientation);
+  object->setOrientation(pose.getRotation());
 
   // update object header
   std_msgs::Header header;
@@ -683,6 +681,8 @@ void ObjectTracker::negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr
     return;
   }
 
+  ROS_DEBUG_NAMED("negative_update", "Doing negative update for frame_id %s", camera_info->header.frame_id.c_str());
+
   // iterate through objects
   for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
     const ObjectPtr& object = *it;
@@ -692,11 +692,13 @@ void ObjectTracker::negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr
 
     // check class_id
     if (!info->class_id.empty() && info->class_id != object->getClassId()) {
+      ROS_DEBUG_NAMED("negative_update", "%s: wrong class_id %s", object->getObjectId().c_str(), object->getClassId().c_str());
       continue;
     }
 
     // check last seen stamp
     if (object->getStamp() >= camera_info->header.stamp - info->not_seen_duration) {
+      ROS_DEBUG_NAMED("negative_update", "%s: seen %f seconds ago", object->getObjectId().c_str(), (camera_info->header.stamp - object->getStamp()).toSec());
       continue;
     }
 
@@ -709,6 +711,7 @@ void ObjectTracker::negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr
     // check distance
     float distance = pose.getOrigin().length();
     if (distance < info->min_distance || (info->max_distance > 0.0 && distance > info->max_distance)) {
+      ROS_DEBUG_NAMED("negative_update", "%s: wrong distance: %f", object->getObjectId().c_str(), distance);
       continue;
     }
 
@@ -716,24 +719,26 @@ void ObjectTracker::negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr
     cv::Point2d point = cameraModel->project3dToPixel(xyz);
 
     // check if object is within field of view
-    if (point.x > 0 + info->ignore_border_pixels &&
-        point.x < camera_info->width - info->ignore_border_pixels &&
-        point.y > 0 + info->ignore_border_pixels &&
-        point.y < camera_info->height - info->ignore_border_pixels) {
-
-      // ==> do negative update
-      ROS_DEBUG("Doing negative update of %s. Should be at image coordinates (%f,%f).", object->getObjectId().c_str(), point.x, point.y);
-      object->addSupport(-info->negative_support);
-      if (object->getSupport() <= param(_inactive_support, info->class_id)) {
-        object->setState(ObjectState::INACTIVE);
-      }
-
-      // publish object update
-      modelUpdatePublisher.publish(object->getMessage());
+    if (!(point.x > 0 + info->ignore_border_pixels &&
+          point.x < camera_info->width - info->ignore_border_pixels &&
+          point.y > 0 + info->ignore_border_pixels &&
+          point.y < camera_info->height - info->ignore_border_pixels)) {
+      ROS_DEBUG_NAMED("negative_update", "%s: not within field of view (image coordinates (%f,%f))", object->getObjectId().c_str(), point.x, point.y);
+      continue;
     }
-  }
-  model.unlock();
 
+    // ==> do negative update
+    ROS_DEBUG("Doing negative update of %s. Should be at image coordinates (%f,%f).", object->getObjectId().c_str(), point.x, point.y);
+    object->addSupport(-info->negative_support);
+    if (object->getSupport() <= param(_inactive_support, info->class_id)) {
+      object->setState(ObjectState::INACTIVE);
+    }
+
+    // publish object update
+    modelUpdatePublisher.publish(object->getMessage());
+  }
+
+  model.unlock();
   // publishModel();
 }
 

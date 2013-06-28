@@ -6,18 +6,30 @@
       <param name="angle_variance" type="double" value="0.121846968"/>
       <param name="publish_interval" type="double" value="1.0" />
 
-      <param name="victim/pending_support" type="double" value="1.0" />
-      <param name="victim/active_support" type="double" value="10" />
-      <param name="victim/min_height" type="double" value="-0.5" />
-      <param name="victim/max_height" type="double" value="0.3" />
-      <rosparam param="victim/marker_color">[0.8, 0.0, 0.0]</rosparam>
-      <rosparam param="qrcode/marker_color">[0.0, 0.0, 0.8]</rosparam>
-
       <rosparam>
-        verification_services: [
-           { service: victim_verification/verify_victim, type: object, class_id: victim, ignore: true },
-           { service: thermal_self_filter/verify_percept, type: percept, class_id: victim, required: true },
-        ]
+        victim:
+          pending_support: 1.0
+          active_support: 10.0
+          min_height: -0.5
+          max_height: 0.3
+          marker_color: [0.8, 0.0, 0.0]
+        qrcode:
+          marker_color: [0.0, 0.0, 0.8]
+        verification_services:
+          - service: victim_verification/verify_victim
+            type: object
+            class_id: victim
+            ignore: true
+          - service: thermal_self_filter/verify_percept
+            type: percept
+            class_id: victim
+            required: true
+        negative_update:
+          - topic: thermal/camera_info
+            class_id: victim
+            min_distance: 0.0
+            max_distance: 1.0
+            negative_support: 0.5
       </rosparam>
 
       <remap from="visualization_marker" to="worldmodel/visualization_marker" />
