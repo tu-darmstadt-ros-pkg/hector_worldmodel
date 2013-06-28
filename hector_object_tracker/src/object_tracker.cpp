@@ -130,6 +130,7 @@ ObjectTracker::ObjectTracker()
 
       // default options
       info->negative_support = 0.0;
+      info->min_support = 0.0;
       info->min_distance = 0.0;
       info->max_distance = 0.0;
       info->ignore_border_pixels = 0.0;
@@ -139,6 +140,7 @@ ObjectTracker::ObjectTracker()
       if (negative_update[i].hasMember("topic"))                options.topic = static_cast<std::string>(negative_update[i]["topic"]);
       if (negative_update[i].hasMember("class_id"))             info->class_id = static_cast<std::string>(negative_update[i]["class_id"]);
       if (negative_update[i].hasMember("negative_support"))     info->negative_support = static_cast<double>(negative_update[i]["negative_support"]);
+      if (negative_update[i].hasMember("min_support"))          info->min_support = static_cast<double>(negative_update[i]["min_support"]);
       if (negative_update[i].hasMember("min_distance"))         info->min_distance = static_cast<double>(negative_update[i]["min_distance"]);
       if (negative_update[i].hasMember("max_distance"))         info->max_distance = static_cast<double>(negative_update[i]["max_distance"]);
       if (negative_update[i].hasMember("ignore_border_pixels")) info->ignore_border_pixels = static_cast<double>(negative_update[i]["ignore_border_pixels"]);
@@ -730,6 +732,7 @@ void ObjectTracker::negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr
     // ==> do negative update
     ROS_DEBUG("Doing negative update of %s. Should be at image coordinates (%f,%f).", object->getObjectId().c_str(), point.x, point.y);
     object->addSupport(-info->negative_support);
+    if (object->getSupport() < info->min_support) object->setSupport(info->min_support);
     if (object->getSupport() <= param(_inactive_support, info->class_id)) {
       object->setState(ObjectState::INACTIVE);
     }

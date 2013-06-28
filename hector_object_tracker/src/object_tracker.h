@@ -63,6 +63,7 @@ private:
   struct NegativeUpdateInfo {
     std::string class_id;
     worldmodel_msgs::ObjectInfo::_support_type negative_support;
+    worldmodel_msgs::ObjectInfo::_support_type min_support;
     float min_distance;
     float max_distance;
     float ignore_border_pixels;
