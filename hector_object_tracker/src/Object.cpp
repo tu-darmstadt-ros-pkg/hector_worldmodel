@@ -116,12 +116,12 @@ const Eigen::Quaternionf& Object::getOrientation() const
 
 void Object::setOrientation(const geometry_msgs::Quaternion& orientation)
 {
-  this->orientation.coeffs() << orientation.w, orientation.x, orientation.y, orientation.z;
+  this->orientation.coeffs() << orientation.x, orientation.y, orientation.z, orientation.w;
 }
 
 void Object::setOrientation(const tf::Quaternion& orientation)
 {
-  this->orientation.coeffs() << orientation.w(), orientation.x(), orientation.y(), orientation.z();
+  this->orientation.coeffs() << orientation.x(), orientation.y(), orientation.z(), orientation.w();
 }
 
 const Eigen::Matrix3f& Object::getCovariance() const {
