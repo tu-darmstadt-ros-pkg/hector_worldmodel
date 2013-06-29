@@ -212,6 +212,8 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
       postfix = " (INACTIVE)";
       break;
     case worldmodel_msgs::ObjectState::UNKNOWN:
+      marker.color.a = 0.5;
+      break;
     case worldmodel_msgs::ObjectState::PENDING:
       marker.color.a = 0.5;
       postfix = " (PENDING)";
