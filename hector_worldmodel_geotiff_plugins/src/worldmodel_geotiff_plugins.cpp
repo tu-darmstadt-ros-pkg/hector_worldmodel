@@ -149,8 +149,9 @@ public:
     int counter = 0;
     for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
       const worldmodel_msgs::Object& object = *it;
-      if (!draw_all_objects_ && object.state.state != worldmodel_msgs::ObjectState::CONFIRMED) continue;
       if (!class_id_.empty() && object.info.class_id != class_id_) continue;
+      if (!draw_all_objects_ && object.state.state != worldmodel_msgs::ObjectState::CONFIRMED) continue;
+      if (object.state.state == worldmodel_msgs::ObjectState::DISCARDED) continue;
 
       Eigen::Vector2f coords;
       coords.x() = object.pose.pose.position.x;
