@@ -427,7 +427,7 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   }
 
   // update object state
-  if (object->getState() == ObjectState::UNKNOWN &&  param(_pending_support, percept->info.class_id) > 0) {
+  if ((object->getState() == ObjectState::UNKNOWN || object->getState() == ObjectState::INACTIVE) &&  param(_pending_support, percept->info.class_id) > 0) {
     if (object->getSupport() >= param(_pending_support, percept->info.class_id) && (percept->header.stamp - object->getHeader().stamp).toSec() >= param(_pending_time, percept->info.class_id)) {
       object->setState(ObjectState::PENDING);
     }
@@ -734,7 +734,8 @@ void ObjectTracker::negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr
     object->addSupport(-info->negative_support);
     if (object->getSupport() < info->min_support) object->setSupport(info->min_support);
     if (object->getSupport() <= param(_inactive_support, info->class_id)) {
-      object->setState(ObjectState::INACTIVE);
+      if (object->getState() == ObjectState::PENDING || object->getState() == ObjectState::ACTIVE)
+        object->setState(ObjectState::INACTIVE);
     }
 
     // publish object update
