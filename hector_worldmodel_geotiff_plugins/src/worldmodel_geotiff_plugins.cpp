@@ -26,8 +26,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
 
-#include <geotiff_writer/map_writer_interface.h>
-#include <geotiff_writer/map_writer_plugin_interface.h>
+#include <hector_geotiff/map_writer_interface.h>
+#include <hector_geotiff/map_writer_plugin_interface.h>
 
 #include <ros/ros.h>
 #include <worldmodel_msgs/GetObjectModel.h>
@@ -173,6 +173,6 @@ public:
 
 //register this planner as a MapWriterPluginInterface plugin
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_DECLARE_CLASS(hector_worldmodel_geotiff_plugins, VictimMapWriter, hector_worldmodel_geotiff_plugins::VictimMapWriter, hector_geotiff::MapWriterPluginInterface)
-PLUGINLIB_DECLARE_CLASS(hector_worldmodel_geotiff_plugins, QRCodeMapWriter, hector_worldmodel_geotiff_plugins::QRCodeMapWriter, hector_geotiff::MapWriterPluginInterface)
+PLUGINLIB_EXPORT_CLASS(hector_worldmodel_geotiff_plugins::VictimMapWriter, hector_geotiff::MapWriterPluginInterface)
+PLUGINLIB_EXPORT_CLASS(hector_worldmodel_geotiff_plugins::QRCodeMapWriter, hector_geotiff::MapWriterPluginInterface)
 
