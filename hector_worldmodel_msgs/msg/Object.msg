@@ -1,3 +1,4 @@
+# hector_worldmodel_msgs/Object
 # This message represents an estimate of an object's pose and identity.
 
 # The header.

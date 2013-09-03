@@ -16,13 +16,13 @@ ObjectModel::ObjectModel(const ObjectModel &other)
 ObjectModel::~ObjectModel()
 {}
 
-ObjectModel::ObjectList ObjectModel::getObjects() const
+ObjectList ObjectModel::getObjects() const
 {
   boost::recursive_mutex::scoped_lock lock(objectsMutex);
   return objects;
 }
 
-ObjectModel::ObjectList ObjectModel::getObjects(const std::string& class_id) const
+ObjectList ObjectModel::getObjects(const std::string& class_id) const
 {
   boost::recursive_mutex::scoped_lock lock(objectsMutex);
   ObjectList class_list;
@@ -58,7 +58,7 @@ void ObjectModel::setFrameId(const std::string &frame_id) {
   header.frame_id = frame_id;
 }
 
-void ObjectModel::getMessage(worldmodel_msgs::ObjectModel& model) const {
+void ObjectModel::getMessage(hector_worldmodel_msgs::ObjectModel& model) const {
   boost::recursive_mutex::scoped_lock lock(objectsMutex);
 
   model.header = getHeader();
@@ -69,8 +69,8 @@ void ObjectModel::getMessage(worldmodel_msgs::ObjectModel& model) const {
   }
 }
 
-worldmodel_msgs::ObjectModelPtr ObjectModel::getMessage() const {
-  worldmodel_msgs::ObjectModelPtr model(new worldmodel_msgs::ObjectModel());
+hector_worldmodel_msgs::ObjectModelPtr ObjectModel::getMessage() const {
+  hector_worldmodel_msgs::ObjectModelPtr model(new hector_worldmodel_msgs::ObjectModel());
   getMessage(*model);
   return model;
 }
@@ -110,11 +110,11 @@ ObjectModel& ObjectModel::operator =(const ObjectModel& other)
   return *this;
 }
 
-ObjectModel& ObjectModel::operator =(const worldmodel_msgs::ObjectModel& other)
+ObjectModel& ObjectModel::operator =(const hector_worldmodel_msgs::ObjectModel& other)
 {
   header = other.header;
 
-  for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = other.objects.begin();
+  for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = other.objects.begin();
       it != other.objects.end();
       ++it)
   {

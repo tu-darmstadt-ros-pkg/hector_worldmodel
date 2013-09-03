@@ -1,3 +1,4 @@
+# hector_worldmodel_msgs/ObjectInfo
 # This message contains information about the estimated class affiliation, object id and corresponding support
 
 # A string identifying the object's class (all objects of a class look the same)

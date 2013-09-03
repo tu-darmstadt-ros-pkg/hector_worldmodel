@@ -11,7 +11,7 @@
   <url>http://ros.org/wiki/hector_worldmodel_geotiff_plugins</url>
 
   <depend package="hector_geotiff"/>
-  <depend package="worldmodel_msgs"/>
+  <depend package="hector_worldmodel_msgs"/>
 
   <export>
     <hector_geotiff plugin="${prefix}/hector_geotiff_plugins.xml" />

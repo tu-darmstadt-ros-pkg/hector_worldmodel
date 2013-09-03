@@ -22,7 +22,7 @@
   <depend package="tf" />
   <depend package="image_geometry" />
 
-  <depend package="worldmodel_msgs" />
+  <depend package="hector_worldmodel_msgs" />
   <depend package="hector_nav_msgs" />
   <depend package="hector_marker_drawing" />
 

@@ -30,7 +30,7 @@
 #include <hector_geotiff/map_writer_plugin_interface.h>
 
 #include <ros/ros.h>
-#include <worldmodel_msgs/GetObjectModel.h>
+#include <hector_worldmodel_msgs/GetObjectModel.h>
 
 #include <pluginlib/class_loader.h>
 #include <fstream>
@@ -77,7 +77,7 @@ void MapWriterPlugin::initialize(const std::string& name)
   plugin_nh.param("draw_all_objects", draw_all_objects_, false);
   plugin_nh.param("class_id", class_id_, std::string());
 
-  service_client_ = nh_.serviceClient<worldmodel_msgs::GetObjectModel>(service_name_);
+  service_client_ = nh_.serviceClient<hector_worldmodel_msgs::GetObjectModel>(service_name_);
 
   initialized_ = true;
   this->name_ = name;
@@ -93,16 +93,16 @@ public:
   {
     if (!initialized_) return;
 
-    worldmodel_msgs::GetObjectModel data;
+    hector_worldmodel_msgs::GetObjectModel data;
     if (!service_client_.call(data)) {
       ROS_ERROR_NAMED(name_, "Cannot draw victims, service %s failed", service_client_.getService().c_str());
       return;
     }
 
     int counter = 0;
-    for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
-      const worldmodel_msgs::Object& object = *it;
-      if (!draw_all_objects_ && object.state.state != worldmodel_msgs::ObjectState::CONFIRMED) continue;
+    for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
+      const hector_worldmodel_msgs::Object& object = *it;
+      if (!draw_all_objects_ && object.state.state != hector_worldmodel_msgs::ObjectState::CONFIRMED) continue;
       if (!class_id_.empty() && object.info.class_id != class_id_) continue;
 
       Eigen::Vector2f coords;
@@ -123,7 +123,7 @@ public:
   {
     if (!initialized_) return;
 
-    worldmodel_msgs::GetObjectModel data;
+    hector_worldmodel_msgs::GetObjectModel data;
     if (!service_client_.call(data)) {
       ROS_ERROR_NAMED(name_, "Cannot draw victims, service %s failed", service_client_.getService().c_str());
       return;
@@ -147,11 +147,11 @@ public:
     }
 
     int counter = 0;
-    for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
-      const worldmodel_msgs::Object& object = *it;
+    for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
+      const hector_worldmodel_msgs::Object& object = *it;
       if (!class_id_.empty() && object.info.class_id != class_id_) continue;
-      if (!draw_all_objects_ && object.state.state != worldmodel_msgs::ObjectState::CONFIRMED) continue;
-      if (object.state.state == worldmodel_msgs::ObjectState::DISCARDED) continue;
+      if (!draw_all_objects_ && object.state.state != hector_worldmodel_msgs::ObjectState::CONFIRMED) continue;
+      if (object.state.state == hector_worldmodel_msgs::ObjectState::DISCARDED) continue;
 
       Eigen::Vector2f coords;
       coords.x() = object.pose.pose.position.x;

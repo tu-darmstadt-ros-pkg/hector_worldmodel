@@ -1,4 +1,4 @@
-# worldmodel_msgs/ImagePercept
+# hector_worldmodel_msgs/ImagePercept
 # This message represents an observation of an object in a single image.
 
 # The header should equal the header of the corresponding image.
@@ -21,4 +21,4 @@ float32 height
 float32 distance
 
 # Additional information about the percept
-worldmodel_msgs/PerceptInfo info
+PerceptInfo info

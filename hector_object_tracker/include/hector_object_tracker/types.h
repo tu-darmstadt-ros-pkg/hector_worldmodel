@@ -1,5 +1,5 @@
 //=================================================================================================
-// Copyright (c) 2013, Johannes Meyer, TU Darmstadt
+// Copyright (c) 2013, Johannes Meyer and contributors, Technische Universitat Darmstadt
 // All rights reserved.
 
 // Redistribution and use in source and binary forms, with or without
@@ -26,27 +26,32 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
 
-#ifndef WORLDMODEL_MSGS_CONSTANTS_OBJECTSTATE_H
-#define WORLDMODEL_MSGS_CONSTANTS_OBJECTSTATE_H
+#include <hector_worldmodel_msgs/Object.h>
+#include <hector_worldmodel_msgs/ObjectModel.h>
+#include <hector_worldmodel_msgs/ImagePercept.h>
+#include <hector_worldmodel_msgs/PosePercept.h>
+#include <hector_worldmodel_msgs/constants/ObjectState.h>
 
-#include <worldmodel_msgs/ObjectState.h>
+#include <boost/shared_ptr.hpp>
+#include <list>
 
-namespace worldmodel_msgs {
+#ifndef HECTOR_OBJECT_TRACKER_TYPES_H
+#define HECTOR_OBJECT_TRACKER_TYPES_H
 
-static inline const char *getObjectStateString(const ObjectState::_state_type& state)
-{
-  switch(state) {
-    case ObjectState::UNKNOWN:     return "UNKNWON";
-    case ObjectState::PENDING:     return "PENDING";
-    case ObjectState::ACTIVE:      return "ACTIVE";
-    case ObjectState::INACTIVE:    return "INACTIVE";
-    case ObjectState::CONFIRMED:   return "CONFIRMED";
-    case ObjectState::DISCARDED:   return "DISCARDED";
-    case ObjectState::APPROACHING: return "APPROACHING";
-    default: return "";
-  }
+namespace hector_object_tracker {
+
+  class Object;
+  typedef boost::shared_ptr<Object> ObjectPtr;
+  typedef boost::shared_ptr<Object const> ObjectConstPtr;
+  typedef std::list<ObjectPtr> ObjectList;
+
+  class ObjectModel;
+
+  using hector_worldmodel_msgs::ObjectState;
+  using hector_worldmodel_msgs::ObjectInfo;
+  using hector_worldmodel_msgs::ImagePercept;
+  using hector_worldmodel_msgs::PosePercept;
+
 }
 
-}
-
-#endif // WORLDMODEL_MSGS_CONSTANTS_OBJECTSTATE_H
+#endif // HECTOR_WORLDMODEL_TYPES_H

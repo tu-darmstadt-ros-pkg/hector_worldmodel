@@ -4,12 +4,11 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
-#include <worldmodel_msgs/ImagePercept.h>
-#include <worldmodel_msgs/PosePercept.h>
-#include <worldmodel_msgs/SetObjectState.h>
-#include <worldmodel_msgs/SetObjectName.h>
-#include <worldmodel_msgs/AddObject.h>
-#include <worldmodel_msgs/GetObjectModel.h>
+#include <hector_object_tracker/types.h>
+#include <hector_worldmodel_msgs/SetObjectState.h>
+#include <hector_worldmodel_msgs/SetObjectName.h>
+#include <hector_worldmodel_msgs/AddObject.h>
+#include <hector_worldmodel_msgs/GetObjectModel.h>
 #include <sensor_msgs/CameraInfo.h>
 
 #include <tf/transform_listener.h>
@@ -28,16 +27,16 @@ public:
 
 protected:
   void sysCommandCb(const std_msgs::StringConstPtr &);
-  void imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &);
-  void posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &);
+  void imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptConstPtr &);
+  void posePerceptCb(const hector_worldmodel_msgs::PosePerceptConstPtr &);
   void objectAgeingCb(const std_msgs::Float32ConstPtr &);
 
-  void modelUpdateCb(const worldmodel_msgs::ObjectModelConstPtr &);
+  void modelUpdateCb(const hector_worldmodel_msgs::ObjectModelConstPtr &);
 
-  bool setObjectStateCb(worldmodel_msgs::SetObjectState::Request& request, worldmodel_msgs::SetObjectState::Response& response);
-  bool setObjectNameCb(worldmodel_msgs::SetObjectName::Request& request, worldmodel_msgs::SetObjectName::Response& response);
-  bool addObjectCb(worldmodel_msgs::AddObject::Request& request, worldmodel_msgs::AddObject::Response& response);
-  bool getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& request, worldmodel_msgs::GetObjectModel::Response& response);
+  bool setObjectStateCb(hector_worldmodel_msgs::SetObjectState::Request& request, hector_worldmodel_msgs::SetObjectState::Response& response);
+  bool setObjectNameCb(hector_worldmodel_msgs::SetObjectName::Request& request, hector_worldmodel_msgs::SetObjectName::Response& response);
+  bool addObjectCb(hector_worldmodel_msgs::AddObject::Request& request, hector_worldmodel_msgs::AddObject::Response& response);
+  bool getObjectModelCb(hector_worldmodel_msgs::GetObjectModel::Request& request, hector_worldmodel_msgs::GetObjectModel::Response& response);
 
   ObjectModel& getModel()             { return model; }
   const ObjectModel& getModel() const { return model; }
@@ -50,7 +49,7 @@ protected:
 protected:
   bool transformPose(const geometry_msgs::Pose& from, geometry_msgs::Pose &to, std_msgs::Header &header, tf::StampedTransform *transform = 0);
   bool transformPose(const geometry_msgs::PoseWithCovariance& from, geometry_msgs::PoseWithCovariance &to, std_msgs::Header &header);
-  bool mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const worldmodel_msgs::ObjectInfo &info, geometry_msgs::Pose &mapped);
+  bool mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const ObjectInfo &info, geometry_msgs::Pose &mapped);
 
 private:
   ros::NodeHandle nh;
@@ -62,8 +61,8 @@ private:
 
   struct NegativeUpdateInfo {
     std::string class_id;
-    worldmodel_msgs::ObjectInfo::_support_type negative_support;
-    worldmodel_msgs::ObjectInfo::_support_type min_support;
+    ObjectInfo::_support_type negative_support;
+    ObjectInfo::_support_type min_support;
     float min_distance;
     float max_distance;
     float ignore_border_pixels;
@@ -106,7 +105,7 @@ private:
   };
   typedef boost::shared_ptr<MergedModelInfo> MergedModelPtr;
   std::vector<MergedModelPtr> merged_models;
-  void mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& info);
+  void mergeModelCallback(const hector_worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& info);
 
   std::string _frame_id;
   std::string _worldmodel_ns;

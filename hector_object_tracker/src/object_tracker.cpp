@@ -1,8 +1,8 @@
 #include "object_tracker.h"
 
 #include <hector_nav_msgs/GetDistanceToObstacle.h>
-#include <worldmodel_msgs/VerifyObject.h>
-#include <worldmodel_msgs/VerifyPercept.h>
+#include <hector_worldmodel_msgs/VerifyObject.h>
+#include <hector_worldmodel_msgs/VerifyPercept.h>
 
 #include <math.h>
 
@@ -44,9 +44,9 @@ ObjectTracker::ObjectTracker()
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
   objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
-  modelPublisher = worldmodel.advertise<worldmodel_msgs::ObjectModel>("objects", 10, false);
-  modelUpdatePublisher = worldmodel.advertise<worldmodel_msgs::Object>("object", 10, false);
-  modelUpdateSubscriber = worldmodel.subscribe<worldmodel_msgs::ObjectModel>("update", 10, &ObjectTracker::modelUpdateCb, this);
+  modelPublisher = worldmodel.advertise<hector_worldmodel_msgs::ObjectModel>("objects", 10, false);
+  modelUpdatePublisher = worldmodel.advertise<hector_worldmodel_msgs::Object>("object", 10, false);
+  modelUpdateSubscriber = worldmodel.subscribe<hector_worldmodel_msgs::ObjectModel>("update", 10, &ObjectTracker::modelUpdateCb, this);
 
   Object::setNamespace(_worldmodel_ns);
   model.setFrameId(_frame_id);
@@ -70,9 +70,9 @@ ObjectTracker::ObjectTracker()
 
       ros::ServiceClient client;
       if (item["type"] == "object") {
-        client = nh.serviceClient<worldmodel_msgs::VerifyObject>(item["service"]);
+        client = nh.serviceClient<hector_worldmodel_msgs::VerifyObject>(item["service"]);
       } else if (item["type"] == "percept") {
-        client = nh.serviceClient<worldmodel_msgs::VerifyPercept>(item["service"]);
+        client = nh.serviceClient<hector_worldmodel_msgs::VerifyPercept>(item["service"]);
       }
 
       if (!client.isValid()) continue;
@@ -104,7 +104,7 @@ ObjectTracker::ObjectTracker()
   if (priv_nh.getParam("merge", merge) && merge.getType() == XmlRpc::XmlRpcValue::TypeArray) {
     for(int i = 0; i < merge.size(); ++i) {
       const MergedModelPtr& info = *merged_models.insert(merged_models.end(), boost::make_shared<MergedModelInfo>());
-      ros::SubscribeOptions options = ros::SubscribeOptions::create<worldmodel_msgs::ObjectModel>(std::string(), 10, boost::bind(&ObjectTracker::mergeModelCallback, this, _1, info), ros::VoidConstPtr(), 0);
+      ros::SubscribeOptions options = ros::SubscribeOptions::create<hector_worldmodel_msgs::ObjectModel>(std::string(), 10, boost::bind(&ObjectTracker::mergeModelCallback, this, _1, info), ros::VoidConstPtr(), 0);
       if (merge[i].getType() == XmlRpc::XmlRpcValue::TypeStruct && merge[i].hasMember("topic")) {
         options.topic = static_cast<std::string>(merge[i]["topic"]);
         if (merge[i].hasMember("prefix")) info->prefix = static_cast<std::string>(merge[i]["prefix"]);
@@ -174,9 +174,9 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
   }
 }
 
-void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &percept)
+void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptConstPtr &percept)
 {
-  worldmodel_msgs::PosePerceptPtr posePercept(new worldmodel_msgs::PosePercept);
+  hector_worldmodel_msgs::PosePerceptPtr posePercept(new hector_worldmodel_msgs::PosePercept);
   tf::Pose pose;
 
   Parameters::load(percept->info.class_id);
@@ -258,7 +258,7 @@ void ObjectTracker::imagePerceptCb(const worldmodel_msgs::ImagePerceptConstPtr &
   posePerceptCb(posePercept);
 }
 
-void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &percept)
+void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConstPtr &percept)
 {
   Parameters::load(percept->info.class_id);
 
@@ -273,8 +273,8 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
   // call percept verification
   float support_added_by_percept_verification = 0.0;
   if (verificationServices.count("percept") > 0) {
-    worldmodel_msgs::VerifyPercept::Request request;
-    worldmodel_msgs::VerifyPercept::Response response;
+    hector_worldmodel_msgs::VerifyPercept::Request request;
+    hector_worldmodel_msgs::VerifyPercept::Response response;
 
     request.percept = *percept;
 
@@ -455,8 +455,8 @@ void ObjectTracker::posePerceptCb(const worldmodel_msgs::PosePerceptConstPtr &pe
 
   // call object verification
   if (verificationServices.count("object") > 0) {
-    VerifyObject::Request request;
-    VerifyObject::Response response;
+    hector_worldmodel_msgs::VerifyObject::Request request;
+    hector_worldmodel_msgs::VerifyObject::Response response;
 
     object->getMessage(request.object);
 
@@ -526,10 +526,10 @@ void ObjectTracker::objectAgeingCb(const std_msgs::Float32ConstPtr &ageing) {
   // lock model
   model.lock();
 
-  ObjectModel::ObjectList objects = model.getObjects();
+  ObjectList objects = model.getObjects();
   
   for(ObjectModel::iterator it = objects.begin(); it != objects.end();) {
-    ObjectModel::ObjectPtr object = *it;
+    ObjectPtr object = *it;
 
     // update support
     object->setSupport(object->getSupport() - ageing->data);
@@ -549,11 +549,11 @@ void ObjectTracker::objectAgeingCb(const std_msgs::Float32ConstPtr &ageing) {
   publishModel();
 }
 
-void ObjectTracker::modelUpdateCb(const worldmodel_msgs::ObjectModelConstPtr &update)
+void ObjectTracker::modelUpdateCb(const hector_worldmodel_msgs::ObjectModelConstPtr &update)
 {
-  for(worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = update->objects.begin(); it != update->objects.end(); ++it)
+  for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = update->objects.begin(); it != update->objects.end(); ++it)
   {
-    worldmodel_msgs::AddObject object;
+    hector_worldmodel_msgs::AddObject object;
     object.request.map_to_next_obstacle = false;
     object.request.object = *it;
     if (!addObjectCb(object.request, object.response)) {
@@ -562,7 +562,7 @@ void ObjectTracker::modelUpdateCb(const worldmodel_msgs::ObjectModelConstPtr &up
   }
 }
 
-bool ObjectTracker::setObjectStateCb(worldmodel_msgs::SetObjectState::Request& request, worldmodel_msgs::SetObjectState::Response& response) {
+bool ObjectTracker::setObjectStateCb(hector_worldmodel_msgs::SetObjectState::Request& request, hector_worldmodel_msgs::SetObjectState::Response& response) {
   model.lock();
 
   ObjectPtr object = model.getObject(request.object_id);
@@ -579,7 +579,7 @@ bool ObjectTracker::setObjectStateCb(worldmodel_msgs::SetObjectState::Request& r
   return true;
 }
 
-bool ObjectTracker::setObjectNameCb(worldmodel_msgs::SetObjectName::Request& request, worldmodel_msgs::SetObjectName::Response& response) {
+bool ObjectTracker::setObjectNameCb(hector_worldmodel_msgs::SetObjectName::Request& request, hector_worldmodel_msgs::SetObjectName::Response& response) {
   model.lock();
 
   ObjectPtr object = model.getObject(request.object_id);
@@ -596,7 +596,7 @@ bool ObjectTracker::setObjectNameCb(worldmodel_msgs::SetObjectName::Request& req
   return true;
 }
 
-bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, worldmodel_msgs::AddObject::Response& response) {
+bool ObjectTracker::addObjectCb(hector_worldmodel_msgs::AddObject::Request& request, hector_worldmodel_msgs::AddObject::Response& response) {
   ObjectPtr object;
   bool newObject = false;
 
@@ -655,12 +655,12 @@ bool ObjectTracker::addObjectCb(worldmodel_msgs::AddObject::Request& request, wo
   return true;
 }
 
-bool ObjectTracker::getObjectModelCb(worldmodel_msgs::GetObjectModel::Request& request, worldmodel_msgs::GetObjectModel::Response& response) {
+bool ObjectTracker::getObjectModelCb(hector_worldmodel_msgs::GetObjectModel::Request& request, hector_worldmodel_msgs::GetObjectModel::Response& response) {
   getMergedModel().getMessage(response.model);
   return true;
 }
 
-void ObjectTracker::mergeModelCallback(const worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& info)
+void ObjectTracker::mergeModelCallback(const hector_worldmodel_msgs::ObjectModelConstPtr &new_model, const MergedModelPtr& info)
 {
   info->model = *new_model;
   publishModel();

@@ -1,9 +1,8 @@
 #ifndef OBJECT_TRACKER_OBJECT_H
 #define OBJECT_TRACKER_OBJECT_H
 
-#include <boost/shared_ptr.hpp>
-#include <worldmodel_msgs/Object.h>
-#include <worldmodel_msgs/constants/ObjectState.h>
+#include <hector_object_tracker/types.h>
+
 #include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_listener.h>
 
@@ -15,12 +14,6 @@
 
 namespace hector_object_tracker {
 
-using namespace worldmodel_msgs;
-
-class Object;
-typedef boost::shared_ptr<Object> ObjectPtr;
-typedef boost::shared_ptr<Object const> ObjectConstPtr;
-
 class Object
 {
 public:
@@ -28,16 +21,16 @@ public:
 
     typedef boost::shared_ptr<Object> Ptr;
     typedef boost::shared_ptr<Object const> ConstPtr;
-    typedef worldmodel_msgs::ObjectState::_state_type StateType;
+    typedef hector_worldmodel_msgs::ObjectState::_state_type StateType;
 
     Object(const std::string class_id = "", const std::string object_id = "");
-    Object(const worldmodel_msgs::Object& other);
+    Object(const hector_worldmodel_msgs::Object& other);
     virtual ~Object();
 
     static void reset();
 
-    void getMessage(worldmodel_msgs::Object& object) const;
-    worldmodel_msgs::Object getMessage() const;
+    void getMessage(hector_worldmodel_msgs::Object& object) const;
+    hector_worldmodel_msgs::Object getMessage() const;
     void getVisualization(visualization_msgs::MarkerArray &markers) const;
 
     void getPoseWithCovariance(geometry_msgs::PoseWithCovariance& pose) const;
@@ -118,7 +111,7 @@ public:
 
     static void setNamespace(const std::string& ns);
 
-    Object& operator=(const worldmodel_msgs::Object& other);
+    Object& operator=(const hector_worldmodel_msgs::Object& other);
 
     ObjectPtr transform(tf::Transformer& tf, const std::string& target_frame) const;
     ObjectPtr transform(tf::Transformer& tf, const std::string& target_frame, const ros::Time& target_time) const;

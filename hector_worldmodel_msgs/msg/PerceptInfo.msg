@@ -1,3 +1,4 @@
+# hector_worldmodel_msgs/PerceptInfo
 # This message contains information about the estimated class and object identity 
 
 # A string identifying the object's class (all objects of a class look the same)

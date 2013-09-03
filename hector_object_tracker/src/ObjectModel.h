@@ -1,10 +1,8 @@
 #ifndef OBJECT_TRACKER_OBJECTMODEL_H
 #define OBJECT_TRACKER_OBJECTMODEL_H
 
-#include <boost/shared_ptr.hpp>
-#include <worldmodel_msgs/ObjectModel.h>
-#include <worldmodel_msgs/ImagePercept.h>
-#include <worldmodel_msgs/PosePercept.h>
+#include <hector_object_tracker/types.h>
+
 #include <std_msgs/String.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -18,15 +16,9 @@
 
 namespace hector_object_tracker {
 
-class Object;
-
 class ObjectModel
 {
 public:
-    typedef boost::shared_ptr<Object> ObjectPtr;
-    typedef boost::shared_ptr<Object const> ObjectConstPtr;
-
-    typedef std::list<ObjectPtr> ObjectList;
     typedef ObjectList::iterator iterator;
     typedef ObjectList::const_iterator const_iterator;
 
@@ -42,8 +34,8 @@ public:
     std_msgs::Header getHeader() const;
     void setFrameId(const std::string &frame_id);
 
-    void getMessage(worldmodel_msgs::ObjectModel& model) const;
-    worldmodel_msgs::ObjectModelPtr getMessage() const;
+    void getMessage(hector_worldmodel_msgs::ObjectModel& model) const;
+    hector_worldmodel_msgs::ObjectModelPtr getMessage() const;
     void getVisualization(visualization_msgs::MarkerArray &markers) const;
     void reset();
 
@@ -59,7 +51,7 @@ public:
     void remove(iterator it);
 
     ObjectModel &operator=(const ObjectModel& other);
-    ObjectModel &operator=(const worldmodel_msgs::ObjectModel& other);
+    ObjectModel &operator=(const hector_worldmodel_msgs::ObjectModel& other);
 
     void lock() const { objectsMutex.lock(); }
     bool try_lock() const { return objectsMutex.try_lock(); }

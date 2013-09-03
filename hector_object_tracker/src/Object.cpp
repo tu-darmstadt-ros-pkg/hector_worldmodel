@@ -27,7 +27,7 @@ Object::Object(const std::string class_id, const std::string object_id)
   // if (this->info.object_id[0] != '/') this->info.object_id = object_namespace + "/" + this->info.object_id;
 }
 
-Object::Object(const worldmodel_msgs::Object& other) {
+Object::Object(const hector_worldmodel_msgs::Object& other) {
   *this = other;
 }
 
@@ -38,15 +38,15 @@ void Object::reset() {
   object_count.clear();
 }
 
-void Object::getMessage(worldmodel_msgs::Object& object) const {
+void Object::getMessage(hector_worldmodel_msgs::Object& object) const {
   object.header = this->header;
   this->getPoseWithCovariance(object.pose);
   object.info   = this->info;
   object.state  = this->state;
 }
 
-worldmodel_msgs::Object Object::getMessage() const {
-  worldmodel_msgs::Object object;
+hector_worldmodel_msgs::Object Object::getMessage() const {
+  hector_worldmodel_msgs::Object object;
   getMessage(object);
   return object;
 }
@@ -158,7 +158,7 @@ void Object::setCovariance(const geometry_msgs::PoseWithCovariance::_covariance_
 
 void Object::setState(const StateType& state) {
   if (this->state.state == state) return;
-  ROS_INFO("Setting object state for %s to %s", getObjectId().c_str(), getObjectStateString(state));
+  ROS_INFO("Setting object state for %s to %s", getObjectId().c_str(), hector_worldmodel_msgs::getObjectStateString(state));
   this->state.state = state;
 }
 
@@ -197,24 +197,24 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   marker.color = param(_marker_color, this->info.class_id);
 
   switch(this->state.state) {
-    case worldmodel_msgs::ObjectState::CONFIRMED:
+    case hector_worldmodel_msgs::ObjectState::CONFIRMED:
       marker.color.r = 0.0;
       marker.color.g = 0.8;
       marker.color.b = 0.0;
       postfix = " (CONFIRMED)";
       break;
-    case worldmodel_msgs::ObjectState::DISCARDED:
+    case hector_worldmodel_msgs::ObjectState::DISCARDED:
       marker.color.a = 0.5;
       postfix = " (DISCARDED)";
       break;
-    case worldmodel_msgs::ObjectState::INACTIVE:
+    case hector_worldmodel_msgs::ObjectState::INACTIVE:
       marker.color.a = 0.5;
       postfix = " (INACTIVE)";
       break;
-    case worldmodel_msgs::ObjectState::UNKNOWN:
+    case hector_worldmodel_msgs::ObjectState::UNKNOWN:
       marker.color.a = 0.5;
       break;
-    case worldmodel_msgs::ObjectState::PENDING:
+    case hector_worldmodel_msgs::ObjectState::PENDING:
       marker.color.a = 0.5;
       postfix = " (PENDING)";
       break;
@@ -252,7 +252,7 @@ void Object::setNamespace(const std::string &ns) {
   object_namespace = ns;
 }
 
-Object& Object::operator =(const worldmodel_msgs::Object& other) {
+Object& Object::operator =(const hector_worldmodel_msgs::Object& other) {
   header = other.header;
   info = other.info;
   state = other.state;
