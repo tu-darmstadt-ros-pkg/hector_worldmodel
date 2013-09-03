@@ -1,7 +1,0 @@
-#!/bin/bash
-
-echo "The package object_tracker is deprecated. Please use hector_object_tracker" >/dev/stderr
-echo "and/or update your launch files to use the new package name." >/dev/stderr
-echo
-
-rosrun hector_object_tracker object_tracker "$@"
