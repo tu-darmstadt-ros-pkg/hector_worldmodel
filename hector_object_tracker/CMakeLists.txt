@@ -73,7 +73,7 @@ add_executable(object_tracker
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(object_tracker hector_worldmodel_msgs_generate_messages_cpp)
+add_dependencies(object_tracker hector_worldmodel_msgs_generate_messages_cpp hector_nav_msgs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(object_tracker
