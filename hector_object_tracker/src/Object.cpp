@@ -194,7 +194,7 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   std::string postfix;
 
   // default color
-  marker.color = param(_marker_color, this->info.class_id);
+  marker.color = parameter(_marker_color, this->info.class_id);
 
   switch(this->state.state) {
     case hector_worldmodel_msgs::ObjectState::CONFIRMED:
