@@ -173,6 +173,11 @@ public:
 
 //register this planner as a MapWriterPluginInterface plugin
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(hector_worldmodel_geotiff_plugins::VictimMapWriter, hector_geotiff::MapWriterPluginInterface)
-PLUGINLIB_EXPORT_CLASS(hector_worldmodel_geotiff_plugins::QRCodeMapWriter, hector_geotiff::MapWriterPluginInterface)
+#ifdef PLUGINLIB_EXPORT_CLASS
+  PLUGINLIB_EXPORT_CLASS(hector_worldmodel_geotiff_plugins::VictimMapWriter, hector_geotiff::MapWriterPluginInterface)
+  PLUGINLIB_EXPORT_CLASS(hector_worldmodel_geotiff_plugins::QRCodeMapWriter, hector_geotiff::MapWriterPluginInterface)
+#else
+  PLUGINLIB_DECLARE_CLASS(hector_worldmodel_geotiff_plugins, VictimMapWriter, hector_worldmodel_geotiff_plugins::VictimMapWriter, hector_geotiff::MapWriterPluginInterface)
+  PLUGINLIB_DECLARE_CLASS(hector_worldmodel_geotiff_plugins, QRCodeMapWriter, hector_worldmodel_geotiff_plugins::QRCodeMapWriter, hector_geotiff::MapWriterPluginInterface)
+#endif
 
