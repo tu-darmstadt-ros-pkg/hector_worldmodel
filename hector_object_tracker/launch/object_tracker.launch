@@ -25,6 +25,10 @@
             type: percept
             class_id: victim
             required: true
+          - service: O3
+            type: object
+            class_id: victim
+            ignore: true
         negative_update:
           - topic: thermal/camera_info
             class_id: victim
