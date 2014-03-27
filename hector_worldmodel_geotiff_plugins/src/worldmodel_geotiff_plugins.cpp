@@ -118,7 +118,7 @@ class QRCodeMapWriter : public MapWriterPlugin
 public:
   virtual ~QRCodeMapWriter() {}
 
-  
+
   void draw(MapWriterInterface *interface)
   {
     if (!initialized_) return;
@@ -130,8 +130,10 @@ public:
     }
 
     std::string team_name;
+    std::string country;
     std::string mission_name;
     nh_.getParamCached("/team", team_name);
+    nh_.getParamCached("/country", country);
     nh_.getParamCached("/mission", mission_name);
 
     boost::posix_time::ptime now = ros::Time::now().toBoost();
@@ -140,10 +142,15 @@ public:
 
     std::ofstream description_file((interface->getBasePathAndFileName() + "_qr.csv").c_str());
     if (description_file.is_open()) {
-      if (!team_name.empty()) description_file << team_name << std::endl;
-      description_file << now_date << "; " << now_time << std::endl;
-      if (!mission_name.empty()) description_file << mission_name << std::endl;
+      description_file << "\"qr codes\"" << std::endl;
+      description_file << "\"1.0\"" << std::endl;
+      if (!team_name.empty()) description_file << "\"" << team_name << "\"" << std::endl;
+      if (!country.empty()) description_file << "\"" << country << "\"" << std::endl;
+      description_file << "\"" << now_date << "\"" << std::endl;
+      description_file << "\"" << now_time << "\"" << std::endl;
+      if (!mission_name.empty()) description_file << "\"" << mission_name << "\"" << std::endl;
       description_file << std::endl;
+      description_file << "id,time,text,x,y,z" << std::endl;
     }
 
     int counter = 0;
@@ -161,7 +168,7 @@ public:
       if (description_file.is_open()) {
         boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
         boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
-        description_file << counter << ";" << time << ";" << object.info.object_id << ";" << object.pose.pose.position.x << ";" << object.pose.pose.position.y << ";" << object.pose.pose.position.z << std::endl;
+        description_file << counter << "," << time << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
       }
     }
 
