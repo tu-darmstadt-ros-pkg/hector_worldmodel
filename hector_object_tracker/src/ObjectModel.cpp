@@ -1,5 +1,6 @@
 #include "ObjectModel.h"
 #include "Object.h"
+#include "angles/angles.h"
 
 namespace hector_object_tracker {
 
@@ -139,8 +140,9 @@ void ObjectModel::getVisualization(visualization_msgs::MarkerArray &markers) con
   }
 }
 
-float ObjectModel::getBestCorrespondence(ObjectPtr &object, const Eigen::Vector3f& position, const Eigen::Matrix3f& covariance, const std::string& class_id, float max_distance) const
+float ObjectModel::getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose, const Eigen::Matrix3f& covariance, const std::string& class_id, float max_distance) const
 {
+  Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
   float min_distance = max_distance;
   if (min_distance <= 0.0) min_distance = FLT_MAX;
 
@@ -149,6 +151,13 @@ float ObjectModel::getBestCorrespondence(ObjectPtr &object, const Eigen::Vector3
   for(ObjectModel::const_iterator it = begin(); it != end(); ++it) {
     ObjectPtr x = *it;
     if (!class_id.empty() && class_id != x->getClassId()) continue;
+    if(class_id=="victim") {
+        tf::Quaternion object_quaterion(x->getOrientation().x(),x->getOrientation().y(),x->getOrientation().z(),x->getOrientation().w());
+        if (abs(angles::shortest_angular_distance(tf::getYaw(object_quaterion),tf::getYaw(pose.getRotation()))) > angles::from_degrees(60.0)) {
+            continue;
+        }
+    }
+
     Eigen::Vector3f diff = x->getPosition() - position;
     float distance = (diff.transpose() * (x->getCovariance() + covariance).inverse() * diff)[0];
     if (distance < min_distance) {
@@ -179,7 +188,9 @@ void ObjectModel::merge(const ObjectPtr& object, tf::TransformListener &tf, cons
 
   // search for corresponding objects
   ObjectPtr mine;
-  float distance = getBestCorrespondence(mine, transformed->getPosition(), transformed->getCovariance(), object->getClassId());
+  tf::Pose pose;
+  transformed->getPose(pose);
+  float distance = getBestCorrespondence(mine, pose, transformed->getCovariance(), object->getClassId());
   if (distance < 1.0) {
     // found corresondence
     ROS_DEBUG("Merging %s and %s", mine->getObjectId().c_str(), object->getObjectId().c_str());

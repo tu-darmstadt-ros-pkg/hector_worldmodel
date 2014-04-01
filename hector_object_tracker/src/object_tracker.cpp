@@ -395,7 +395,7 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   // find correspondence
   ObjectPtr object;
   if (percept->info.object_id.empty()) {
-    model.getBestCorrespondence(object, position, covariance, percept->info.class_id, 1.0f);
+    model.getBestCorrespondence(object, pose, covariance, percept->info.class_id, 1.0f);
   } else {
     object = model.getObject(percept->info.object_id);
   }
