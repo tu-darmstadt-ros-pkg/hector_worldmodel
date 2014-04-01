@@ -527,7 +527,7 @@ void ObjectTracker::objectAgeingCb(const std_msgs::Float32ConstPtr &ageing) {
   model.lock();
 
   ObjectList objects = model.getObjects();
-  
+
   for(ObjectModel::iterator it = objects.begin(); it != objects.end();) {
     ObjectPtr object = *it;
 
@@ -646,7 +646,7 @@ bool ObjectTracker::addObjectCb(hector_worldmodel_msgs::AddObject::Request& requ
   object->setSupport(request.object.info.support);
 
   if (newObject) model.add(object);
-  object->getMessage(request.object);
+  object->getMessage(response.object);
   modelUpdatePublisher.publish(response.object);
 
   model.unlock();
