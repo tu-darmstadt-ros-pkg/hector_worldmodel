@@ -57,7 +57,7 @@ public:
     bool try_lock() const { return objectsMutex.try_lock(); }
     void unlock() const { objectsMutex.unlock(); }
 
-    float getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose, const Eigen::Matrix3f& covariance, const std::string& class_id, float max_distance = 0.0) const;
+    float getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose, const Eigen::Matrix3f& covariance, const std::string& class_id, const std::string& name, float max_distance = 0.0) const;
 
     void mergeWith(const ObjectModel& other, tf::TransformListener& tf, const std::string& prefix = std::string());
     void merge(const ObjectPtr& other, tf::TransformListener& tf, const std::string& prefix = std::string());
