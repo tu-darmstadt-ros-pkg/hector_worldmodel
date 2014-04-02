@@ -190,12 +190,14 @@ public:
       if (!draw_all_objects_ && object.state.state != hector_worldmodel_msgs::ObjectState::CONFIRMED) continue;
       if (object.state.state == hector_worldmodel_msgs::ObjectState::DISCARDED) continue;
 
+      ++counter;
+
       // add only largest qr codes into geotiff
       if (isLargest(object, data.response.model.objects)) {
           Eigen::Vector2f coords;
           coords.x() = object.pose.pose.position.x;
           coords.y() = object.pose.pose.position.y;
-          interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(10,10,240));
+          interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(10,10,240));
       }
 
       if (description_file.is_open()) {
