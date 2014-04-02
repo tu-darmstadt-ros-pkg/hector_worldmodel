@@ -38,6 +38,8 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/formatters.hpp>
 
+#include <boost/tokenizer.hpp>
+
 namespace hector_worldmodel_geotiff_plugins {
 
 using namespace hector_geotiff;
@@ -52,6 +54,7 @@ public:
   virtual void draw(MapWriterInterface *interface) = 0;
 
 protected:
+
   ros::NodeHandle nh_;
   ros::ServiceClient service_client_;
 
@@ -118,6 +121,33 @@ class QRCodeMapWriter : public MapWriterPlugin
 public:
   virtual ~QRCodeMapWriter() {}
 
+  bool isLargest(const hector_worldmodel_msgs::Object& object, const std::vector<hector_worldmodel_msgs::Object>& objects )
+  {
+    // determine size of qr code
+    boost::tokenizer<boost::char_separator<char> > tokens(object.info.name, boost::char_separator<char>("_"));
+    boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
+    std::advance(it,3);
+    float size = boost::lexical_cast<float>(it->substr(0,it->size()-2));
+
+    // compare size of other qr codes
+    for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = objects.begin(); it != objects.end(); ++it) {
+      const hector_worldmodel_msgs::Object& object2 = *it;
+      float dist_sqr = (object.pose.pose.position.x-object2.pose.pose.position.x)*(object.pose.pose.position.x-object2.pose.pose.position.x)
+                      +(object.pose.pose.position.y-object2.pose.pose.position.y)*(object.pose.pose.position.y-object2.pose.pose.position.y);
+      // check if both qrcodes are at same position+tolerance
+      if (dist_sqr < 1.0) {
+        boost::tokenizer<boost::char_separator<char> > tokens(object2.info.name, boost::char_separator<char>("_"));
+        boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
+        std::advance(it,3);
+        float size2 = boost::lexical_cast<float>(it->substr(0,it->size()-2));
+        if (size2 > size) {
+          return false;
+          //ROS_INFO(" %f is greater that %f",size2,size);
+        }
+      }
+    }
+    return true;
+  }
 
   void draw(MapWriterInterface *interface)
   {
@@ -160,10 +190,13 @@ public:
       if (!draw_all_objects_ && object.state.state != hector_worldmodel_msgs::ObjectState::CONFIRMED) continue;
       if (object.state.state == hector_worldmodel_msgs::ObjectState::DISCARDED) continue;
 
-      Eigen::Vector2f coords;
-      coords.x() = object.pose.pose.position.x;
-      coords.y() = object.pose.pose.position.y;
-      interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(10,10,240));
+      // add only largest qr codes into geotiff
+      if (isLargest(object, data.response.model.objects)) {
+          Eigen::Vector2f coords;
+          coords.x() = object.pose.pose.position.x;
+          coords.y() = object.pose.pose.position.y;
+          interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(10,10,240));
+      }
 
       if (description_file.is_open()) {
         boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
