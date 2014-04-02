@@ -151,7 +151,8 @@ float ObjectModel::getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose
   for(ObjectModel::const_iterator it = begin(); it != end(); ++it) {
     ObjectPtr x = *it;
     if (!class_id.empty() && class_id != x->getClassId()) continue;
-    if(class_id=="victim") {
+    if (class_id == "qrcode" && object->getName() != x->getName()) continue;
+    if (class_id == "victim") {
         tf::Quaternion object_quaterion(x->getOrientation().x(),x->getOrientation().y(),x->getOrientation().z(),x->getOrientation().w());
         if (abs(angles::shortest_angular_distance(tf::getYaw(object_quaterion),tf::getYaw(pose.getRotation()))) > angles::from_degrees(60.0)) {
             continue;
