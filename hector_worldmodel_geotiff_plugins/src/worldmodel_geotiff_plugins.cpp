@@ -223,12 +223,12 @@ public:
       ++counter;
 
       // add only largest qr codes into geotiff
-      if (isLargest(object, data.response.model.objects)) {
+     // if (isLargest(object, data.response.model.objects)) {
           Eigen::Vector2f coords;
           coords.x() = object.pose.pose.position.x;
           coords.y() = object.pose.pose.position.y;
           interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(10,10,240));
-      }
+     // }
 
       if (description_file.is_open()) {
         boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
