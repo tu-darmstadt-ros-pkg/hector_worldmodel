@@ -102,6 +102,30 @@ public:
       return;
     }
 
+    std::string team_name;
+    std::string country;
+    std::string mission_name;
+    nh_.getParamCached("/team", team_name);
+    nh_.getParamCached("/country", country);
+    nh_.getParamCached("/mission", mission_name);
+
+    boost::posix_time::ptime now = ros::Time::now().toBoost();
+    boost::gregorian::date now_date(now.date());
+    boost::posix_time::time_duration now_time(now.time_of_day().hours(), now.time_of_day().minutes(), now.time_of_day().seconds(), 0);
+
+    std::ofstream description_file((interface->getBasePathAndFileName() + "_victims.csv").c_str());
+    if (description_file.is_open()) {
+      description_file << "\"victims\"" << std::endl;
+      description_file << "\"1.0\"" << std::endl;
+      if (!team_name.empty()) description_file << "\"" << team_name << "\"" << std::endl;
+      if (!country.empty()) description_file << "\"" << country << "\"" << std::endl;
+      description_file << "\"" << now_date << "\"" << std::endl;
+      description_file << "\"" << now_time << "\"" << std::endl;
+      if (!mission_name.empty()) description_file << "\"" << mission_name << "\"" << std::endl;
+      description_file << std::endl;
+      description_file << "id,time,name,x,y,z" << std::endl;
+    }
+
     int counter = 0;
     for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
       const hector_worldmodel_msgs::Object& object = *it;
@@ -112,6 +136,12 @@ public:
       coords.x() = object.pose.pose.position.x;
       coords.y() = object.pose.pose.position.y;
       interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(240,10,10));
+
+      if (description_file.is_open()) {
+        boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
+        boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
+        description_file << counter << "," << time << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
+      }
     }
   }
 };
@@ -120,34 +150,6 @@ class QRCodeMapWriter : public MapWriterPlugin
 {
 public:
   virtual ~QRCodeMapWriter() {}
-
-  bool isLargest(const hector_worldmodel_msgs::Object& object, const std::vector<hector_worldmodel_msgs::Object>& objects )
-  {
-    // determine size of qr code
-    boost::tokenizer<boost::char_separator<char> > tokens(object.info.name, boost::char_separator<char>("_"));
-    boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
-    std::advance(it,3);
-    float size = boost::lexical_cast<float>(it->substr(0,it->size()-2));
-
-    // compare size of other qr codes
-    for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-      const hector_worldmodel_msgs::Object& object2 = *it;
-      float dist_sqr = (object.pose.pose.position.x-object2.pose.pose.position.x)*(object.pose.pose.position.x-object2.pose.pose.position.x)
-                      +(object.pose.pose.position.y-object2.pose.pose.position.y)*(object.pose.pose.position.y-object2.pose.pose.position.y);
-      // check if both qrcodes are at same position+tolerance
-      if (dist_sqr < 1.0) {
-        boost::tokenizer<boost::char_separator<char> > tokens(object2.info.name, boost::char_separator<char>("_"));
-        boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
-        std::advance(it,3);
-        float size2 = boost::lexical_cast<float>(it->substr(0,it->size()-2));
-        if (size2 > size) {
-          return false;
-          //ROS_INFO(" %f is greater that %f",size2,size);
-        }
-      }
-    }
-    return true;
-  }
 
   void draw(MapWriterInterface *interface)
   {
@@ -183,6 +185,25 @@ public:
       description_file << "id,time,text,x,y,z" << std::endl;
     }
 
+//    hector_worldmodel_msgs::Object test_obj;
+//    test_obj.state.state = hector_worldmodel_msgs::ObjectState::CONFIRMED;
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "0_04_arena_6mm_outbla";
+//    test_obj.info.object_id = "qrcode_0";
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "0_04_arena_3.5mm_outbla";
+//    test_obj.info.object_id = "qrcode_1";
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "best_nix";
+//    test_obj.info.object_id = "qrcode_0";
+//    test_obj.pose.pose.position.x = 0.3;
+//    data.response.model.objects.push_back(test_obj);
+
     int counter = 0;
     for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
       const hector_worldmodel_msgs::Object& object = *it;
@@ -190,12 +211,14 @@ public:
       if (!draw_all_objects_ && object.state.state != hector_worldmodel_msgs::ObjectState::CONFIRMED) continue;
       if (object.state.state == hector_worldmodel_msgs::ObjectState::DISCARDED) continue;
 
+      ++counter;
+
       // add only largest qr codes into geotiff
       if (isLargest(object, data.response.model.objects)) {
           Eigen::Vector2f coords;
           coords.x() = object.pose.pose.position.x;
           coords.y() = object.pose.pose.position.y;
-          interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(10,10,240));
+          interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(10,10,240));
       }
 
       if (description_file.is_open()) {
@@ -206,6 +229,52 @@ public:
     }
 
     description_file.close();
+  }
+
+protected:
+  float getSizeFromName(const std::string& name)
+  {
+    try {
+      boost::tokenizer<boost::char_separator<char> > tokens(name, boost::char_separator<char>("_"));
+      boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
+
+      for (unsigned int i = 0; i < 3; i++, it++) {
+        if (it == tokens.end())
+          return -1.0f;
+      }
+
+      return it->size() > 2 ? boost::lexical_cast<float>(it->substr(0, it->size()-2)) : -1.0f;
+    }
+    catch (boost::bad_lexical_cast&) {
+      return -1.0f;
+    }
+  }
+
+  bool isLargest(const hector_worldmodel_msgs::Object& object, const std::vector<hector_worldmodel_msgs::Object>& objects )
+  {
+    // determine size of qr code
+    float size = getSizeFromName(object.info.name);
+
+    if (size == -1.0f) // QR does not include size information
+      return true;
+
+    // compare size of other qr codes
+    for (hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = objects.begin(); it != objects.end(); ++it) {
+      const hector_worldmodel_msgs::Object& object2 = *it;
+
+      float dist_sqr = (object.pose.pose.position.x-object2.pose.pose.position.x) * (object.pose.pose.position.x-object2.pose.pose.position.x)
+                      +(object.pose.pose.position.y-object2.pose.pose.position.y) * (object.pose.pose.position.y-object2.pose.pose.position.y);
+
+      // check if both qrcodes are at same position+tolerance
+      if (dist_sqr < 0.75f) {
+        float size2 = getSizeFromName(object2.info.name);
+        if (size2 > size) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 };
 
