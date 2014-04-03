@@ -266,7 +266,7 @@ protected:
                       +(object.pose.pose.position.y-object2.pose.pose.position.y) * (object.pose.pose.position.y-object2.pose.pose.position.y);
 
       // check if both qrcodes are at same position+tolerance
-      if (dist_sqr < 1.0) {
+      if (dist_sqr < 0.75f) {
         float size2 = getSizeFromName(object2.info.name);
         if (size2 > size) {
           return false;
