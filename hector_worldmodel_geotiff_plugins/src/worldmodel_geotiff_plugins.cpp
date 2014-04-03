@@ -151,34 +151,6 @@ class QRCodeMapWriter : public MapWriterPlugin
 public:
   virtual ~QRCodeMapWriter() {}
 
-  bool isLargest(const hector_worldmodel_msgs::Object& object, const std::vector<hector_worldmodel_msgs::Object>& objects )
-  {
-    // determine size of qr code
-    boost::tokenizer<boost::char_separator<char> > tokens(object.info.name, boost::char_separator<char>("_"));
-    boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
-    std::advance(it,3);
-    float size = boost::lexical_cast<float>(it->substr(0,it->size()-2));
-
-    // compare size of other qr codes
-    for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = objects.begin(); it != objects.end(); ++it) {
-      const hector_worldmodel_msgs::Object& object2 = *it;
-      float dist_sqr = (object.pose.pose.position.x-object2.pose.pose.position.x)*(object.pose.pose.position.x-object2.pose.pose.position.x)
-                      +(object.pose.pose.position.y-object2.pose.pose.position.y)*(object.pose.pose.position.y-object2.pose.pose.position.y);
-      // check if both qrcodes are at same position+tolerance
-      if (dist_sqr < 1.0) {
-        boost::tokenizer<boost::char_separator<char> > tokens(object2.info.name, boost::char_separator<char>("_"));
-        boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
-        std::advance(it,3);
-        float size2 = boost::lexical_cast<float>(it->substr(0,it->size()-2));
-        if (size2 > size) {
-          return false;
-          //ROS_INFO(" %f is greater that %f",size2,size);
-        }
-      }
-    }
-    return true;
-  }
-
   void draw(MapWriterInterface *interface)
   {
     if (!initialized_) return;
@@ -213,6 +185,25 @@ public:
       description_file << "id,time,text,x,y,z" << std::endl;
     }
 
+//    hector_worldmodel_msgs::Object test_obj;
+//    test_obj.state.state = hector_worldmodel_msgs::ObjectState::CONFIRMED;
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "0_04_arena_6mm_outbla";
+//    test_obj.info.object_id = "qrcode_0";
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "0_04_arena_3.5mm_outbla";
+//    test_obj.info.object_id = "qrcode_1";
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "best_nix";
+//    test_obj.info.object_id = "qrcode_0";
+//    test_obj.pose.pose.position.x = 0.3;
+//    data.response.model.objects.push_back(test_obj);
+
     int counter = 0;
     for(hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = data.response.model.objects.begin(); it != data.response.model.objects.end(); ++it) {
       const hector_worldmodel_msgs::Object& object = *it;
@@ -238,6 +229,52 @@ public:
     }
 
     description_file.close();
+  }
+
+protected:
+  float getSizeFromName(const std::string& name)
+  {
+    try {
+      boost::tokenizer<boost::char_separator<char> > tokens(name, boost::char_separator<char>("_"));
+      boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
+
+      for (unsigned int i = 0; i < 3; i++, it++) {
+        if (it == tokens.end())
+          return -1.0f;
+      }
+
+      return it->size() > 2 ? boost::lexical_cast<float>(it->substr(0, it->size()-2)) : -1.0f;
+    }
+    catch (boost::bad_lexical_cast&) {
+      return -1.0f;
+    }
+  }
+
+  bool isLargest(const hector_worldmodel_msgs::Object& object, const std::vector<hector_worldmodel_msgs::Object>& objects )
+  {
+    // determine size of qr code
+    float size = getSizeFromName(object.info.name);
+
+    if (size == -1.0f) // QR does not include size information
+      return true;
+
+    // compare size of other qr codes
+    for (hector_worldmodel_msgs::ObjectModel::_objects_type::const_iterator it = objects.begin(); it != objects.end(); ++it) {
+      const hector_worldmodel_msgs::Object& object2 = *it;
+
+      float dist_sqr = (object.pose.pose.position.x-object2.pose.pose.position.x) * (object.pose.pose.position.x-object2.pose.pose.position.x)
+                      +(object.pose.pose.position.y-object2.pose.pose.position.y) * (object.pose.pose.position.y-object2.pose.pose.position.y);
+
+      // check if both qrcodes are at same position+tolerance
+      if (dist_sqr < 1.0) {
+        float size2 = getSizeFromName(object2.info.name);
+        if (size2 > size) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 };
 
