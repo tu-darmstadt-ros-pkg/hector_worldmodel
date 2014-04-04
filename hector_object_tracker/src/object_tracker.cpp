@@ -221,11 +221,11 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
         pose.setOrigin(pose.getOrigin().normalized() * distance);
         ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
       } else {
-        ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s returned %f", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str(), response.distance);
+        ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s returned %f", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str(), response.distance);
         return;
       }
     } else {
-      ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s is not available", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str());
+      ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s is not available", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str());
       return;
     }
   }
