@@ -572,6 +572,27 @@ bool ObjectTracker::setObjectStateCb(hector_worldmodel_msgs::SetObjectState::Req
   }
 
   object->setState(request.new_state.state);
+//  //if a victim is confirmed ignore all victims in an area of ... around this victim
+//  if (request.new_state.state==-1){
+//      ignoreVictimsInSurrounding(object,0.3)
+//  for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
+//    ObjectPtr x = *it;
+//    if (object.empty() && class_id == x->getClassId()) continue;
+//    if (class_id == "victim") {
+
+//    }
+
+//    Eigen::Vector3f diff = x->getPosition() - position;
+//    float distance = (diff.transpose() * (x->getCovariance() + covariance).inverse() * diff)[0];
+//    if (distance < min_distance) {
+//      object = x;
+//      min_distance = distance;
+//    }
+//  }
+
+
+
+//  }
   modelUpdatePublisher.publish(object->getMessage());
 
   model.unlock();
