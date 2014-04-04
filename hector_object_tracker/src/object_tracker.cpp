@@ -580,7 +580,7 @@ bool ObjectTracker::setObjectStateCb(hector_worldmodel_msgs::SetObjectState::Req
       if (current_obj->getClassId() == "victim"){
         double distance = sqrt((current_obj->getPosition().x() - object->getPosition().x())*(current_obj->getPosition().x() - object->getPosition().x())+
                             (current_obj->getPosition().y() - object->getPosition().y())*(current_obj->getPosition().y() - object->getPosition().y()));
-        if (distance < 0.2) {
+        if (distance < 0.3) {
           current_obj->setState(hector_worldmodel_msgs::ObjectState::DISCARDED);
         }
       }
