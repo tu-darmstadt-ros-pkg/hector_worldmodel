@@ -572,27 +572,21 @@ bool ObjectTracker::setObjectStateCb(hector_worldmodel_msgs::SetObjectState::Req
   }
 
   object->setState(request.new_state.state);
-//  //if a victim is confirmed ignore all victims in an area of ... around this victim
-//  if (request.new_state.state==-1){
-//      ignoreVictimsInSurrounding(object,0.3)
-//  for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
-//    ObjectPtr x = *it;
-//    if (object.empty() && class_id == x->getClassId()) continue;
-//    if (class_id == "victim") {
 
-//    }
+  //if a victim is confirmed ignore all victims in an area of 0.2m around this victim
+  if ((object->getClassId()=="victim") && (request.new_state.state==hector_worldmodel_msgs::ObjectState::CONFIRMED)){
+    for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
+      ObjectPtr current_obj = *it;
+      if (current_obj->getClassId() == "victim"){
+        double distance = sqrt((current_obj->getPosition().x() - object->getPosition().x())*(current_obj->getPosition().x() - object->getPosition().x())+
+                            (current_obj->getPosition().y() - object->getPosition().y())*(current_obj->getPosition().y() - object->getPosition().y()));
+        if (distance < 0.2) {
+          current_obj->setState(hector_worldmodel_msgs::ObjectState::DISCARDED);
+        }
+      }
+    }
+  }
 
-//    Eigen::Vector3f diff = x->getPosition() - position;
-//    float distance = (diff.transpose() * (x->getCovariance() + covariance).inverse() * diff)[0];
-//    if (distance < min_distance) {
-//      object = x;
-//      min_distance = distance;
-//    }
-//  }
-
-
-
-//  }
   modelUpdatePublisher.publish(object->getMessage());
 
   model.unlock();
