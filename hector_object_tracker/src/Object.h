@@ -9,6 +9,7 @@
 #include <Eigen/Geometry>
 
 #include <ros/ros.h>
+#include <angles/angles.h>
 
 #include <map>
 
@@ -106,7 +107,7 @@ public:
       return this->header.stamp;
     }
 
-    void intersect(const Eigen::Vector3f& position, const Eigen::Matrix3f& covariance, float support);
+    void intersect(const tf::Pose& poseB, const Eigen::Matrix3f& covarianceB, float support);
     void update(const Eigen::Vector3f& position, const Eigen::Matrix3f& covariance, float support);
 
     static void setNamespace(const std::string& ns);

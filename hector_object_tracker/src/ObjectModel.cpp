@@ -154,11 +154,10 @@ float ObjectModel::getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose
     if (class_id == "qrcode" && name != x->getName()) continue;
     if (class_id == "victim") {
         tf::Quaternion object_quaterion(x->getOrientation().x(),x->getOrientation().y(),x->getOrientation().z(),x->getOrientation().w());
-        if (abs(angles::shortest_angular_distance(tf::getYaw(object_quaterion),tf::getYaw(pose.getRotation()))) > angles::from_degrees(60.0)) {
+        if (std::abs(angles::shortest_angular_distance(tf::getYaw(object_quaterion),tf::getYaw(pose.getRotation()))) > angles::from_degrees(110.0)) {
             continue;
         }
     }
-
     Eigen::Vector3f diff = x->getPosition() - position;
     float distance = (diff.transpose() * (x->getCovariance() + covariance).inverse() * diff)[0];
     if (distance < min_distance) {

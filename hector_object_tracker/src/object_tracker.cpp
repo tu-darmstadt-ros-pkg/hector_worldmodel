@@ -1,6 +1,7 @@
 #include "object_tracker.h"
 
 #include <hector_nav_msgs/GetDistanceToObstacle.h>
+#include <hector_nav_msgs/GetNormal.h>
 #include <hector_worldmodel_msgs/VerifyObject.h>
 #include <hector_worldmodel_msgs/VerifyPercept.h>
 
@@ -54,6 +55,7 @@ ObjectTracker::ObjectTracker()
   sysCommandSubscriber = nh.subscribe("/syscommand", 10, &ObjectTracker::sysCommandCb, this);
   poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
   pointDebugPublisher = priv_nh.advertise<geometry_msgs::PointStamped>("point", 10, false);
+  orientation_update_pub = priv_nh.advertise<geometry_msgs::PoseStamped>("victim_orientation_normal", 10, false);
 
   XmlRpc::XmlRpcValue verification_services;
   if (priv_nh.getParam("verification_services", verification_services) && verification_services.getType() == XmlRpc::XmlRpcValue::TypeArray) {
@@ -95,6 +97,7 @@ ObjectTracker::ObjectTracker()
     }
   }
 
+  get_normal_octomap_service = nh.serviceClient<hector_nav_msgs::GetNormal>("hector_octomap_server/get_normal");
   setObjectState = worldmodel.advertiseService("set_object_state", &ObjectTracker::setObjectStateCb, this);
   setObjectName  = worldmodel.advertiseService("set_object_name", &ObjectTracker::setObjectNameCb, this);
   addObject = worldmodel.advertiseService("add_object", &ObjectTracker::addObjectCb, this);
@@ -216,10 +219,29 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
     tf::pointTFToMsg(pose.getOrigin(), request.point.point);
     if (parameter(_distance_to_obstacle_service, percept->info.class_id).call(request, response)) {
       if (response.distance > 0.0) {
-        // distance = std::max(response.distance - 0.1f, 0.0f);
-        distance = std::max(response.distance, 0.0f);
-        pose.setOrigin(pose.getOrigin().normalized() * distance);
-        ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
+        // @TODO: Maybe possible for all types?
+        if (percept->info.class_id == "victim") {
+          tf::StampedTransform transform;
+          if (!response.end_point.header.frame_id.empty() && tf.resolve(percept->header.frame_id) != tf.resolve(response.end_point.header.frame_id)) {
+            // retrieve camera transformation from tf
+            try {
+              tf.waitForTransform(percept->header.frame_id, response.end_point.header.frame_id, percept->header.stamp, ros::Duration(1.0));
+              tf.lookupTransform(percept->header.frame_id, response.end_point.header.frame_id, percept->header.stamp, transform);
+            } catch (tf::TransformException& ex) {
+              ROS_ERROR("%s", ex.what());
+              return;
+            }
+          }
+
+          tf::Vector3 point(response.end_point.point.x, response.end_point.point.y, response.end_point.point.z);
+          point = transform*point; // we need to transform to percept frame
+          pose.setOrigin(point);
+        } else {
+          // distance = std::max(response.distance - 0.1f, 0.0f);
+          distance = std::max(response.distance, 0.0f);
+          pose.setOrigin(pose.getOrigin().normalized() * distance);
+          ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
+        }
       } else {
         ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s returned %f", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str(), response.distance);
         return;
@@ -364,13 +386,29 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     Eigen::Matrix3f rotation_map_camera(eigen_rotation.toRotationMatrix().cast<float>());
     covariance = rotation_map_camera * covariance * rotation_map_camera.transpose();
   }
-  Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
 
   // check height
   float relative_height = pose.getOrigin().z() - cameraTransform.getOrigin().z();
   if (relative_height < parameter(_min_height, percept->info.class_id) || relative_height > parameter(_max_height, percept->info.class_id)) {
     ROS_INFO("Discarding %s percept with height %f", percept->info.class_id.c_str(), relative_height);
     return;
+  }
+
+  // estimate victim orienation from normal in octomap
+  if (percept->info.class_id == "victim")
+  {
+      hector_nav_msgs::GetNormal get_normal;
+
+      Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
+      get_normal.request.point.point.x = position.x();
+      get_normal.request.point.point.y = position.y();
+      get_normal.request.point.point.z = position.z();
+      get_normal_octomap_service.call(get_normal.request, get_normal.response);
+
+      tf::Quaternion rotation = pose.getRotation();
+      rotation.setRPY(0.0, 0.0, get_normal.response.yaw);
+      //std::cout << "setting yaw of victim to" << response_normal.yaw *(180.0/M_PI)<<".................."<< std::endl;
+      pose.setRotation(rotation);
   }
 
   // fix height (assume camera is always at 0.475m)
@@ -410,16 +448,16 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   if (!object) {
     object = model.add(percept->info.class_id, percept->info.object_id);
 
-    object->setPosition(position);
+    object->setPose(pose);
     object->setCovariance(covariance);
     object->setSupport(support);
 
-    ROS_INFO("Found new object %s of class %s at (%f,%f)!", object->getObjectId().c_str(), object->getClassId().c_str(), position.x(), position.y());
+    ROS_INFO("Found new object %s of class %s at (%f,%f)!", object->getObjectId().c_str(), object->getClassId().c_str(), pose.getOrigin().getX(), pose.getOrigin().getY());
 
   // or update existing object
   } else if (support > 0.0) {
     //object->update(position, covariance, support);
-    object->intersect(position, covariance, support);
+    object->intersect(pose, covariance, support);
 
   // or simply decrease support
   } else {
@@ -438,14 +476,21 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     }
   }
 
-  // set object orientation
-  object->setOrientation(pose.getRotation());
-
   // update object header
   std_msgs::Header header;
   header.stamp    = percept->header.stamp;
   header.frame_id = _frame_id;
   object->setHeader(header);
+
+  // visualize the updated orientation of a victim
+  if (orientation_update_pub.getNumSubscribers() > 0) {
+      tf::Pose pose_ob;
+      object->getPose(pose_ob);
+      geometry_msgs::PoseStamped pose_pub;
+      tf::poseTFToMsg(pose_ob, pose_pub.pose);
+      pose_pub.header = header;
+      orientation_update_pub.publish(pose_pub);
+  }
 
   // update object name
   if (!percept->info.name.empty()) object->setName(percept->info.name);
@@ -869,3 +914,4 @@ int main(int argc, char **argv)
 
   exit(0);
 }
+

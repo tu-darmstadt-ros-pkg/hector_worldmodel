@@ -2,6 +2,7 @@
 #define OBJECT_TRACKER_OBJECT_TRACKER_H
 
 #include <ros/ros.h>
+#include <tf/tf.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
 #include <hector_object_tracker/types.h>
@@ -73,11 +74,15 @@ private:
   std::vector<NegativeUpdatePtr> negativeUpdate;
   void negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr &, const NegativeUpdatePtr& info);
 
+  ros::Publisher orientation_update_pub;
+
   ros::Publisher modelPublisher;
   ros::Publisher modelUpdatePublisher;
   ros::Publisher poseDebugPublisher;
   ros::Publisher pointDebugPublisher;
   ros::Subscriber modelUpdateSubscriber;
+
+  ros::ServiceClient get_normal_octomap_service;
 
   ros::ServiceServer setObjectState;
   ros::ServiceServer addObject;
