@@ -189,17 +189,47 @@ public:
 //    test_obj.state.state = hector_worldmodel_msgs::ObjectState::CONFIRMED;
 
 //    test_obj.info.class_id = "qrcode";
-//    test_obj.info.name = "0_04_arena_6mm_outbla";
+//    test_obj.info.name = "Y_25_arena_2.4mm_Yaounde";
 //    test_obj.info.object_id = "qrcode_0";
 //    data.response.model.objects.push_back(test_obj);
 
 //    test_obj.info.class_id = "qrcode";
-//    test_obj.info.name = "0_04_arena_3.5mm_outbla";
+//    test_obj.info.name = "Y_25_arena_6mm_yuccas";
 //    test_obj.info.object_id = "qrcode_1";
 //    data.response.model.objects.push_back(test_obj);
 
 //    test_obj.info.class_id = "qrcode";
-//    test_obj.info.name = "best_nix";
+//    test_obj.info.name = "Y_23_arena_6mm_yoked";
+//    test_obj.info.object_id = "qrcode_0";
+//    test_obj.pose.pose.position.x = 0.3;
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "Y_28_arena_6mm_yukking";
+//    test_obj.info.object_id = "qrcode_0";
+//    test_obj.pose.pose.position.x = 0.3;
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "Y_23_arena_6mm_yoked";
+//    test_obj.info.object_id = "qrcode_0";
+//    test_obj.pose.pose.position.x = 0.3;
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "Y_13_arena_6mm_Yorkshire";
+//    test_obj.info.object_id = "qrcode_0";
+//    test_obj.pose.pose.position.x = 0.3;
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "Y_11_arena_6mm_yakking";
+//    test_obj.info.object_id = "qrcode_0";
+//    test_obj.pose.pose.position.x = 0.3;
+//    data.response.model.objects.push_back(test_obj);
+
+//    test_obj.info.class_id = "qrcode";
+//    test_obj.info.name = "VictYel_1_yelled";
 //    test_obj.info.object_id = "qrcode_0";
 //    test_obj.pose.pose.position.x = 0.3;
 //    data.response.model.objects.push_back(test_obj);
@@ -238,8 +268,11 @@ protected:
       boost::tokenizer<boost::char_separator<char> > tokens(name, boost::char_separator<char>("_"));
       boost::tokenizer<boost::char_separator<char> >::const_iterator it = tokens.begin();
 
-      for (unsigned int i = 0; i < 3; i++, it++) {
-        if (it == tokens.end())
+      if (it == tokens.end())
+        return -1.0f;
+
+      for (unsigned int i = 0; i < 3; i++) {
+        if (++it == tokens.end())
           return -1.0f;
       }
 

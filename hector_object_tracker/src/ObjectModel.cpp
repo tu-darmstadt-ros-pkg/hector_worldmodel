@@ -155,7 +155,12 @@ float ObjectModel::getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose
     if (class_id == "victim") {
         tf::Quaternion object_quaterion(x->getOrientation().x(),x->getOrientation().y(),x->getOrientation().z(),x->getOrientation().w());
         if (abs(angles::shortest_angular_distance(tf::getYaw(object_quaterion),tf::getYaw(pose.getRotation()))) > angles::from_degrees(60.0)) {
-            continue;
+            // if the angle of the orientation of the new percept is too different to and already modeled victim
+            // AND the old victim is not CONFIRMED (state = -1) model a new victim
+            if (x->getState()!=hector_worldmodel_msgs::ObjectState::CONFIRMED){
+                continue;
+            }
+
         }
     }
 
