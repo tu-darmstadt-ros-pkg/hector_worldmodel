@@ -571,7 +571,7 @@ bool ObjectTracker::setObjectStateCb(hector_worldmodel_msgs::SetObjectState::Req
     return false;
   }
 
-  object->setState(request.new_state.state);
+
 
   //if a victim is confirmed ignore all victims in an area of 0.2m around this victim
   if ((object->getClassId()=="victim") && (request.new_state.state==hector_worldmodel_msgs::ObjectState::CONFIRMED)){
@@ -586,6 +586,8 @@ bool ObjectTracker::setObjectStateCb(hector_worldmodel_msgs::SetObjectState::Req
       }
     }
   }
+
+  object->setState(request.new_state.state);
 
   modelUpdatePublisher.publish(object->getMessage());
 
