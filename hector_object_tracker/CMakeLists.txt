@@ -4,7 +4,7 @@ project(hector_object_tracker)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp tf image_geometry hector_worldmodel_msgs hector_nav_msgs hector_marker_drawing)
+find_package(catkin REQUIRED COMPONENTS roscpp tf image_geometry hector_worldmodel_msgs hector_nav_msgs hector_marker_drawing cmake_modules)
 
 find_package(Eigen REQUIRED)
 include_directories(${EIGEN_INCLUDE_DIRS})
