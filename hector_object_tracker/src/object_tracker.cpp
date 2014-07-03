@@ -56,6 +56,8 @@ ObjectTracker::ObjectTracker()
   poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
   pointDebugPublisher = priv_nh.advertise<geometry_msgs::PointStamped>("point", 10, false);
   orientation_update_pub = priv_nh.advertise<geometry_msgs::PoseStamped>("victim_orientation_normal", 10, false);
+  robot_pose_pub = priv_nh.advertise<geometry_msgs::PoseStamped>("current_robot_pose", 10, false);
+
 
   XmlRpc::XmlRpcValue verification_services;
   if (priv_nh.getParam("verification_services", verification_services) && verification_services.getType() == XmlRpc::XmlRpcValue::TypeArray) {
@@ -403,12 +405,44 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
       get_normal.request.point.point.x = position.x();
       get_normal.request.point.point.y = position.y();
       get_normal.request.point.point.z = position.z();
-      get_normal_octomap_service.call(get_normal.request, get_normal.response);
+
+      if (robot_pose_pub.getNumSubscribers() > 0) {
+          tf::StampedTransform robotPoseTransform;
+          tf.lookupTransform ( _frame_id,"base_link", percept->header.stamp, robotPoseTransform);
+          std_msgs::Header header_r;
+          header_r.stamp    = percept->header.stamp;
+          header_r.frame_id = _frame_id;
+
+          tf::Pose pose_robot;
+          pose_robot.setOrigin(tf::Vector3(get_normal.request.point.point.x,get_normal.request.point.point.y,get_normal.request.point.point.z));
+          pose_robot.setRotation(robotPoseTransform.getRotation());
+          geometry_msgs::PoseStamped pose_robot_pub;
+          tf::poseTFToMsg(pose_robot, pose_robot_pub.pose);
+          pose_robot_pub.header = header_r;
+          robot_pose_pub.publish(pose_robot_pub);
+      }
+
+      if ( get_normal_octomap_service.call(get_normal.request, get_normal.response)){
+      std::cout << get_normal.response.normal << std::endl;
+      // check the correct orientation of the normal
+
+
+
+
 
       tf::Quaternion rotation = pose.getRotation();
       rotation.setRPY(0.0, 0.0, get_normal.response.yaw);
+
+      ROS_ERROR( "winkel opfer normale %f ",get_normal.response.yaw);
+       pose.setRotation(rotation);}
+      else{
+      //rotation.setRPY(0.0, 0.0, 0.0);
       //std::cout << "setting yaw of victim to" << response_normal.yaw *(180.0/M_PI)<<".................."<< std::endl;
-      pose.setRotation(rotation);
+        //pose.setRotation(rotation);
+          ROS_ERROR ("not computing normal using normal rotation");
+      }
+
+
   }
 
   // fix height (assume camera is always at 0.475m)
