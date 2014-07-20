@@ -284,6 +284,7 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
 
 void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConstPtr &percept)
 {
+    std::cout << "object tracker pose callback frame id"<<percept->header.frame_id<<std::endl;
   Parameters::load(percept->info.class_id);
 
   // publish pose in source frame for debugging purposes
@@ -405,8 +406,9 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
       get_normal.request.point.point.x = position.x();
       get_normal.request.point.point.y = position.y();
       get_normal.request.point.point.z = position.z();
+      get_normal.request.point.header.frame_id="map";
+      get_normal.request.point.header.stamp=percept->header.stamp;
 
-      if (robot_pose_pub.getNumSubscribers() > 0) {
           tf::StampedTransform robotPoseTransform;
           tf.lookupTransform ( _frame_id,"base_link", percept->header.stamp, robotPoseTransform);
           std_msgs::Header header_r;
@@ -414,16 +416,25 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
           header_r.frame_id = _frame_id;
 
           tf::Pose pose_robot;
-          pose_robot.setOrigin(tf::Vector3(get_normal.request.point.point.x,get_normal.request.point.point.y,get_normal.request.point.point.z));
+          pose_robot.setOrigin(robotPoseTransform.getOrigin());
           pose_robot.setRotation(robotPoseTransform.getRotation());
-          geometry_msgs::PoseStamped pose_robot_pub;
-          tf::poseTFToMsg(pose_robot, pose_robot_pub.pose);
-          pose_robot_pub.header = header_r;
+
+
+          if (robot_pose_pub.getNumSubscribers() > 0) {
+              geometry_msgs::PoseStamped pose_robot_pub;
+              tf::poseTFToMsg(pose_robot, pose_robot_pub.pose);
+              pose_robot_pub.header = header_r;
           robot_pose_pub.publish(pose_robot_pub);
       }
 
+      get_normal.request.point_on_correct_side.point.x = pose_robot.getOrigin().x();
+      get_normal.request.point_on_correct_side.point.y = pose_robot.getOrigin().y();
+      get_normal.request.point_on_correct_side.point.z = pose_robot.getOrigin().z();
+      get_normal.request.point_on_correct_side.header.frame_id=percept->header.frame_id;
+      get_normal.request.point_on_correct_side.header.stamp=percept->header.stamp;
+
       if ( get_normal_octomap_service.call(get_normal.request, get_normal.response)){
-      std::cout << get_normal.response.normal << std::endl;
+     // std::cout << get_normal.response.normal << std::endl;
       // check the correct orientation of the normal
 
 
@@ -431,7 +442,11 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
 
 
       tf::Quaternion rotation = pose.getRotation();
-      rotation.setRPY(0.0, 0.0, get_normal.response.yaw);
+      double yaw_pose=get_normal.response.yaw+M_PI;
+      if (yaw_pose>2*M_PI){
+          yaw_pose=yaw_pose-(2*M_PI);
+      }
+      rotation.setRPY(0.0, yaw_pose, 0.0);
 
       ROS_ERROR( "winkel opfer normale %f ",get_normal.response.yaw);
        pose.setRotation(rotation);}
@@ -440,6 +455,18 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
       //std::cout << "setting yaw of victim to" << response_normal.yaw *(180.0/M_PI)<<".................."<< std::endl;
         //pose.setRotation(rotation);
           ROS_ERROR ("not computing normal using normal rotation");
+          double not_normal_yaw=atan2(pose_robot.getOrigin().z()-get_normal.request.point.point.z, pose_robot.getOrigin().x()-get_normal.request.point.point.x);
+          std::cout << "not normal normal x:" << pose_robot.getOrigin().x()-get_normal.request.point.point.x << "  y:" << pose_robot.getOrigin().y()-get_normal.request.point.point.y << "   z:"<<pose_robot.getOrigin().z()-get_normal.request.point.point.z<< std::endl;
+          std::cout << "not normal yaw "<< not_normal_yaw << std::endl;
+          std::cout << "not normal yaw 2"<<atan2(0.0-pose_robot.getOrigin().z()+get_normal.request.point.point.z, 0.0-pose_robot.getOrigin().x()+get_normal.request.point.point.x)<<std::endl;
+          tf::Quaternion rotation = pose.getRotation();
+
+          double yaw_pose=not_normal_yaw+M_PI;
+          if (not_normal_yaw>2*M_PI){
+              not_normal_yaw=not_normal_yaw-(2*M_PI);
+          }
+          rotation.setRPY(0.0,not_normal_yaw, 0.0);
+          pose.setRotation(rotation);
       }
 
 
@@ -516,16 +543,6 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   header.frame_id = _frame_id;
   object->setHeader(header);
 
-  // visualize the updated orientation of a victim
-  if (orientation_update_pub.getNumSubscribers() > 0) {
-      tf::Pose pose_ob;
-      object->getPose(pose_ob);
-      geometry_msgs::PoseStamped pose_pub;
-      tf::poseTFToMsg(pose_ob, pose_pub.pose);
-      pose_pub.header = header;
-      orientation_update_pub.publish(pose_pub);
-  }
-
   // update object name
   if (!percept->info.name.empty()) object->setName(percept->info.name);
 
@@ -574,9 +591,21 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     geometry_msgs::Pose pose;
     object->getPose(pose);
     point.point = pose.position;
+    point.point = pose.position;
     point.header = object->getHeader();
     pointDebugPublisher.publish(point);
   }
+
+  // visualize the updated orientation of a victim for debugging
+  if (orientation_update_pub.getNumSubscribers() > 0) {
+      tf::Pose pose_ob;
+      object->getPose(pose_ob);
+      geometry_msgs::PoseStamped pose_pub;
+      tf::poseTFToMsg(pose_ob, pose_pub.pose);
+      pose_pub.header = header;
+      orientation_update_pub.publish(pose_pub);
+  }
+
 
   modelUpdatePublisher.publish(object->getMessage());
   publishModel();
