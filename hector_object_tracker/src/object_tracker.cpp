@@ -396,9 +396,10 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   }
 
   // estimate victim orienation from normal in octomap
+  if (false){
 
-  if (percept->info.class_id == "victim")
-  {
+    if (percept->info.class_id == "victim")
+    {
       //Calculate normal at victim position
       hector_nav_msgs::GetNormal get_normal;
       Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
@@ -424,37 +425,38 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
 
         if ( get_normal_octomap_service.call(get_normal.request, get_normal.response)){
 
-            tf::Quaternion rotation = pose.getRotation();
-            double yaw_pose = get_normal.response.yaw+M_PI;
-            if (yaw_pose>2*M_PI){
-                yaw_pose = yaw_pose-(2*M_PI);
-            }
-            rotation.setRPY(0.0, 0.0, yaw_pose);
-            pose.setRotation(rotation);
-            ROS_DEBUG( "The yaw for the victim was calculated by using normals:  %f ",yaw_pose);
+          tf::Quaternion rotation = pose.getRotation();
+          double yaw_pose = get_normal.response.yaw+M_PI;
+          if (yaw_pose>2*M_PI){
+            yaw_pose = yaw_pose-(2*M_PI);
+          }
+          rotation.setRPY(0.0, 0.0, yaw_pose);
+          pose.setRotation(rotation);
+          ROS_DEBUG( "The yaw for the victim was calculated by using normals:  %f ",yaw_pose);
 
         }
-      else{
+        else{
 
           double not_normal_yaw=atan2(pose_robot.getOrigin().y()-get_normal.request.point.point.y, pose_robot.getOrigin().x()-get_normal.request.point.point.x);
           tf::Quaternion rotation = pose.getRotation();
           // We do not want the actual normal direction but the direction pointing towards the victim
           not_normal_yaw=not_normal_yaw+M_PI;
           if (not_normal_yaw>2*M_PI){
-              not_normal_yaw = not_normal_yaw-(2*M_PI);
+            not_normal_yaw = not_normal_yaw-(2*M_PI);
           }
           rotation.setRPY(0.0,0.0, not_normal_yaw);
           pose.setRotation(rotation);
           ROS_DEBUG( "The yaw for the victim was calculated by NOT using normals: %f ",not_normal_yaw);
-      }
+        }
 
       }
       catch (tf::TransformException& ex) {
-          ROS_ERROR("Could not calculate proper normal orientation due to missing robot pose %s", ex.what());
-          return;
-        }
+        ROS_ERROR("Could not calculate proper normal orientation due to missing robot pose %s", ex.what());
+        return;
+      }
 
 
+    }
   }
 
   // fix height (assume camera is always at 0.475m)
