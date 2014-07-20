@@ -162,8 +162,10 @@ void Object::setState(const StateType& state) {
   this->state.state = state;
 }
 
-void Object::intersect(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& covarianceB, float support) {
-  // old cov/covariance is A , new cov/covIn is B
+void Object::intersect(const tf::Pose& poseB, const Eigen::Matrix3f& covarianceB, float support) {
+  Eigen::Vector3f positionB(poseB.getOrigin().x(), poseB.getOrigin().y(), poseB.getOrigin().z());
+  tf::Quaternion orientationB = poseB.getRotation();
+    // old cov/covariance is A , new cov/covIn is B
   float omega = 0.5f;
 
   Eigen::Matrix3f A(covariance.inverse() * omega);
@@ -173,6 +175,22 @@ void Object::intersect(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& 
   position = covariance * (A * position + B * positionB);
 
   setPosition(position);
+
+  // update orientation of victims using lowpass filtering
+  if (getClassId() == "victim") {
+      double low_pass_weight = 0.2;
+      tf::Quaternion q;
+      q.setValue(orientation.x(), orientation.y(), orientation.z(), orientation.w());
+      double filtered_yaw = tf::getYaw(q) + low_pass_weight*angles::shortest_angular_distance(tf::getYaw(q), tf::getYaw(orientationB));
+
+      q.setRPY(0.0, 0.0, filtered_yaw);
+      setOrientation(q);
+  }
+  // or simply set new orientation
+  else {
+    setOrientation(orientationB);
+  }
+
   setCovariance(covariance);
   addSupport(support);
 }
