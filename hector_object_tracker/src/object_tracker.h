@@ -75,8 +75,6 @@ private:
   void negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr &, const NegativeUpdatePtr& info);
 
   ros::Publisher orientation_update_pub;
-  ros::Publisher robot_pose_pub;
-
   ros::Publisher modelPublisher;
   ros::Publisher modelUpdatePublisher;
   ros::Publisher poseDebugPublisher;

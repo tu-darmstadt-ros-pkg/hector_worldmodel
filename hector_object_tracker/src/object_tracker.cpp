@@ -56,8 +56,6 @@ ObjectTracker::ObjectTracker()
   poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
   pointDebugPublisher = priv_nh.advertise<geometry_msgs::PointStamped>("point", 10, false);
   orientation_update_pub = priv_nh.advertise<geometry_msgs::PoseStamped>("victim_orientation_normal", 10, false);
-  robot_pose_pub = priv_nh.advertise<geometry_msgs::PoseStamped>("current_robot_pose", 10, false);
-
 
   XmlRpc::XmlRpcValue verification_services;
   if (priv_nh.getParam("verification_services", verification_services) && verification_services.getType() == XmlRpc::XmlRpcValue::TypeArray) {
@@ -245,11 +243,11 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
           ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
         }
       } else {
-        ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s returned %f", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str(), response.distance);
+        ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s returned %f", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str(), response.distance);
         return;
       }
     } else {
-      ROS_WARN("Ignoring percept due to unknown or infinite distance: service %s is not available", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str());
+      ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s is not available", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str());
       return;
     }
   }
@@ -284,7 +282,7 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
 
 void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConstPtr &percept)
 {
-    std::cout << "object tracker pose callback frame id"<<percept->header.frame_id<<std::endl;
+
   Parameters::load(percept->info.class_id);
 
   // publish pose in source frame for debugging purposes
@@ -400,74 +398,60 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   // estimate victim orienation from normal in octomap
   if (percept->info.class_id == "victim")
   {
+      //Calculate normal at victim position
       hector_nav_msgs::GetNormal get_normal;
-
       Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
+
       get_normal.request.point.point.x = position.x();
       get_normal.request.point.point.y = position.y();
       get_normal.request.point.point.z = position.z();
-      get_normal.request.point.header.frame_id="map";
-      get_normal.request.point.header.stamp=percept->header.stamp;
+      get_normal.request.point.header.frame_id = "map";
+      get_normal.request.point.header.stamp = percept->header.stamp;
+      tf::StampedTransform robotPoseTransform;
 
-          tf::StampedTransform robotPoseTransform;
-          tf.lookupTransform ( _frame_id,"base_link", percept->header.stamp, robotPoseTransform);
-          std_msgs::Header header_r;
-          header_r.stamp    = percept->header.stamp;
-          header_r.frame_id = _frame_id;
+      try{
+        tf.lookupTransform ( _frame_id,"base_link", percept->header.stamp, robotPoseTransform);
+        tf::Pose pose_robot;
+        pose_robot.setOrigin(robotPoseTransform.getOrigin());
+        pose_robot.setRotation(robotPoseTransform.getRotation());
 
-          tf::Pose pose_robot;
-          pose_robot.setOrigin(robotPoseTransform.getOrigin());
-          pose_robot.setRotation(robotPoseTransform.getRotation());
+        get_normal.request.point_on_correct_side.point.x = pose_robot.getOrigin().x();
+        get_normal.request.point_on_correct_side.point.y = pose_robot.getOrigin().y();
+        get_normal.request.point_on_correct_side.point.z = pose_robot.getOrigin().z();
+        get_normal.request.point_on_correct_side.header.frame_id = percept->header.frame_id;
+        get_normal.request.point_on_correct_side.header.stamp = percept->header.stamp;
 
+        if ( get_normal_octomap_service.call(get_normal.request, get_normal.response)){
 
-          if (robot_pose_pub.getNumSubscribers() > 0) {
-              geometry_msgs::PoseStamped pose_robot_pub;
-              tf::poseTFToMsg(pose_robot, pose_robot_pub.pose);
-              pose_robot_pub.header = header_r;
-          robot_pose_pub.publish(pose_robot_pub);
-      }
+            tf::Quaternion rotation = pose.getRotation();
+            double yaw_pose = get_normal.response.yaw+M_PI;
+            if (yaw_pose>2*M_PI){
+                yaw_pose = yaw_pose-(2*M_PI);
+            }
+            rotation.setRPY(0.0, yaw_pose, 0.0);
+            pose.setRotation(rotation);
+            ROS_DEBUG( "The yaw for the victim was calculated by using normals:  %f ",yaw_pose);
 
-      get_normal.request.point_on_correct_side.point.x = pose_robot.getOrigin().x();
-      get_normal.request.point_on_correct_side.point.y = pose_robot.getOrigin().y();
-      get_normal.request.point_on_correct_side.point.z = pose_robot.getOrigin().z();
-      get_normal.request.point_on_correct_side.header.frame_id=percept->header.frame_id;
-      get_normal.request.point_on_correct_side.header.stamp=percept->header.stamp;
-
-      if ( get_normal_octomap_service.call(get_normal.request, get_normal.response)){
-     // std::cout << get_normal.response.normal << std::endl;
-      // check the correct orientation of the normal
-
-
-
-
-
-      tf::Quaternion rotation = pose.getRotation();
-      double yaw_pose=get_normal.response.yaw+M_PI;
-      if (yaw_pose>2*M_PI){
-          yaw_pose=yaw_pose-(2*M_PI);
-      }
-      rotation.setRPY(0.0, yaw_pose, 0.0);
-
-      ROS_ERROR( "winkel opfer normale %f ",get_normal.response.yaw);
-       pose.setRotation(rotation);}
+        }
       else{
-      //rotation.setRPY(0.0, 0.0, 0.0);
-      //std::cout << "setting yaw of victim to" << response_normal.yaw *(180.0/M_PI)<<".................."<< std::endl;
-        //pose.setRotation(rotation);
-          ROS_ERROR ("not computing normal using normal rotation");
-          double not_normal_yaw=atan2(pose_robot.getOrigin().z()-get_normal.request.point.point.z, pose_robot.getOrigin().x()-get_normal.request.point.point.x);
-          std::cout << "not normal normal x:" << pose_robot.getOrigin().x()-get_normal.request.point.point.x << "  y:" << pose_robot.getOrigin().y()-get_normal.request.point.point.y << "   z:"<<pose_robot.getOrigin().z()-get_normal.request.point.point.z<< std::endl;
-          std::cout << "not normal yaw "<< not_normal_yaw << std::endl;
-          std::cout << "not normal yaw 2"<<atan2(0.0-pose_robot.getOrigin().z()+get_normal.request.point.point.z, 0.0-pose_robot.getOrigin().x()+get_normal.request.point.point.x)<<std::endl;
-          tf::Quaternion rotation = pose.getRotation();
 
-          double yaw_pose=not_normal_yaw+M_PI;
+          double not_normal_yaw=atan2(pose_robot.getOrigin().z()-get_normal.request.point.point.z, pose_robot.getOrigin().x()-get_normal.request.point.point.x);
+          tf::Quaternion rotation = pose.getRotation();
+          // We do not want the actual normal direction but the direction pointing towards the victim
+          not_normal_yaw=not_normal_yaw+M_PI;
           if (not_normal_yaw>2*M_PI){
-              not_normal_yaw=not_normal_yaw-(2*M_PI);
+              not_normal_yaw = not_normal_yaw-(2*M_PI);
           }
           rotation.setRPY(0.0,not_normal_yaw, 0.0);
           pose.setRotation(rotation);
+          ROS_DEBUG( "The yaw for the victim was calculated by NOT using normals: %f ",not_normal_yaw);
       }
+
+      }
+      catch (tf::TransformException& ex) {
+          ROS_ERROR("Could not calculate proper normal orientation due to missing robot pose %s", ex.what());
+          return;
+        }
 
 
   }
