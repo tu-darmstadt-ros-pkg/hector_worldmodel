@@ -396,65 +396,66 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   }
 
   // estimate victim orienation from normal in octomap
-  if (percept->info.class_id == "victim")
-  {
-      //Calculate normal at victim position
-      hector_nav_msgs::GetNormal get_normal;
-      Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
 
-      get_normal.request.point.point.x = position.x();
-      get_normal.request.point.point.y = position.y();
-      get_normal.request.point.point.z = position.z();
-      get_normal.request.point.header.frame_id = "map";
-      get_normal.request.point.header.stamp = percept->header.stamp;
-      tf::StampedTransform robotPoseTransform;
+//  if (percept->info.class_id == "victim")
+//  {
+//      //Calculate normal at victim position
+//      hector_nav_msgs::GetNormal get_normal;
+//      Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
 
-      try{
-        tf.lookupTransform ( _frame_id,"base_link", percept->header.stamp, robotPoseTransform);
-        tf::Pose pose_robot;
-        pose_robot.setOrigin(robotPoseTransform.getOrigin());
-        pose_robot.setRotation(robotPoseTransform.getRotation());
+//      get_normal.request.point.point.x = position.x();
+//      get_normal.request.point.point.y = position.y();
+//      get_normal.request.point.point.z = position.z();
+//      get_normal.request.point.header.frame_id = "map";
+//      get_normal.request.point.header.stamp = percept->header.stamp;
+//      tf::StampedTransform robotPoseTransform;
 
-        get_normal.request.point_on_correct_side.point.x = pose_robot.getOrigin().x();
-        get_normal.request.point_on_correct_side.point.y = pose_robot.getOrigin().y();
-        get_normal.request.point_on_correct_side.point.z = pose_robot.getOrigin().z();
-        get_normal.request.point_on_correct_side.header.frame_id = percept->header.frame_id;
-        get_normal.request.point_on_correct_side.header.stamp = percept->header.stamp;
+//      try{
+//        tf.lookupTransform ( _frame_id,"base_link", percept->header.stamp, robotPoseTransform);
+//        tf::Pose pose_robot;
+//        pose_robot.setOrigin(robotPoseTransform.getOrigin());
+//        pose_robot.setRotation(robotPoseTransform.getRotation());
 
-        if ( get_normal_octomap_service.call(get_normal.request, get_normal.response)){
+//        get_normal.request.point_on_correct_side.point.x = pose_robot.getOrigin().x();
+//        get_normal.request.point_on_correct_side.point.y = pose_robot.getOrigin().y();
+//        get_normal.request.point_on_correct_side.point.z = pose_robot.getOrigin().z();
+//        get_normal.request.point_on_correct_side.header.frame_id = percept->header.frame_id;
+//        get_normal.request.point_on_correct_side.header.stamp = percept->header.stamp;
 
-            tf::Quaternion rotation = pose.getRotation();
-            double yaw_pose = get_normal.response.yaw+M_PI;
-            if (yaw_pose>2*M_PI){
-                yaw_pose = yaw_pose-(2*M_PI);
-            }
-            rotation.setRPY(0.0, yaw_pose, 0.0);
-            pose.setRotation(rotation);
-            ROS_DEBUG( "The yaw for the victim was calculated by using normals:  %f ",yaw_pose);
+//        if ( get_normal_octomap_service.call(get_normal.request, get_normal.response)){
 
-        }
-      else{
+//            tf::Quaternion rotation = pose.getRotation();
+//            double yaw_pose = get_normal.response.yaw+M_PI;
+//            if (yaw_pose>2*M_PI){
+//                yaw_pose = yaw_pose-(2*M_PI);
+//            }
+//            rotation.setRPY(0.0, yaw_pose, 0.0);
+//            pose.setRotation(rotation);
+//            ROS_DEBUG( "The yaw for the victim was calculated by using normals:  %f ",yaw_pose);
 
-          double not_normal_yaw=atan2(pose_robot.getOrigin().z()-get_normal.request.point.point.z, pose_robot.getOrigin().x()-get_normal.request.point.point.x);
-          tf::Quaternion rotation = pose.getRotation();
-          // We do not want the actual normal direction but the direction pointing towards the victim
-          not_normal_yaw=not_normal_yaw+M_PI;
-          if (not_normal_yaw>2*M_PI){
-              not_normal_yaw = not_normal_yaw-(2*M_PI);
-          }
-          rotation.setRPY(0.0,not_normal_yaw, 0.0);
-          pose.setRotation(rotation);
-          ROS_DEBUG( "The yaw for the victim was calculated by NOT using normals: %f ",not_normal_yaw);
-      }
+//        }
+//      else{
 
-      }
-      catch (tf::TransformException& ex) {
-          ROS_ERROR("Could not calculate proper normal orientation due to missing robot pose %s", ex.what());
-          return;
-        }
+//          double not_normal_yaw=atan2(pose_robot.getOrigin().z()-get_normal.request.point.point.z, pose_robot.getOrigin().x()-get_normal.request.point.point.x);
+//          tf::Quaternion rotation = pose.getRotation();
+//          // We do not want the actual normal direction but the direction pointing towards the victim
+//          not_normal_yaw=not_normal_yaw+M_PI;
+//          if (not_normal_yaw>2*M_PI){
+//              not_normal_yaw = not_normal_yaw-(2*M_PI);
+//          }
+//          rotation.setRPY(0.0,not_normal_yaw, 0.0);
+//          pose.setRotation(rotation);
+//          ROS_DEBUG( "The yaw for the victim was calculated by NOT using normals: %f ",not_normal_yaw);
+//      }
+
+//      }
+//      catch (tf::TransformException& ex) {
+//          ROS_ERROR("Could not calculate proper normal orientation due to missing robot pose %s", ex.what());
+//          return;
+//        }
 
 
-  }
+//  }
 
   // fix height (assume camera is always at 0.475m)
   // pose.setOrigin(tf::Point(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z() - cameraTransform.getOrigin().z() + 0.475f));
