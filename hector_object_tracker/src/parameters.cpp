@@ -33,10 +33,12 @@
 #include <ros/console.h>
 
 #include <hector_nav_msgs/GetDistanceToObstacle.h>
+#include <hector_nav_msgs/GetNormal.h>
 
 namespace hector_object_tracker {
 
 std::map<std::string, bool>   _project_objects;
+std::map<std::string, bool>   _with_orientation;
 std::map<std::string, double> _default_distance;
 std::map<std::string, double> _distance_variance;
 std::map<std::string, double> _angle_variance;
@@ -49,7 +51,10 @@ std::map<std::string, double> _active_time;
 std::map<std::string, double> _inactive_support;
 std::map<std::string, double> _inactive_time;
 std::map<std::string, std_msgs::ColorRGBA> _marker_color;
-std::map<std::string, ros::ServiceClient> _distance_to_obstacle_service;
+std::map<std::string, ros::ServiceClientPtr> _distance_to_obstacle_service;
+std::map<std::string, ros::ServiceClientPtr> _get_normal_service;
+std::map<std::string, ServiceClientsWithProperties> _percept_verification_services;
+std::map<std::string, ServiceClientsWithProperties> _object_verification_services;
 
 namespace Parameters {
 
@@ -65,6 +70,8 @@ namespace Parameters {
 
     if (priv_nh.hasParam(prefix + "project_objects"))
       priv_nh.getParam(prefix + "project_objects", _project_objects[class_id]);
+    if (priv_nh.hasParam(prefix + "with_orientation"))
+      priv_nh.getParam(prefix + "with_orientation", _with_orientation[class_id]);
     if (priv_nh.hasParam(prefix + "default_distance"))
       priv_nh.getParam(prefix + "default_distance", _default_distance[class_id]);
     if (priv_nh.hasParam(prefix + "distance_variance"))
@@ -112,11 +119,17 @@ namespace Parameters {
     }
 
     if (!distance_to_obstacle_service.empty()) {
-      _distance_to_obstacle_service[class_id] = ros::NodeHandle().serviceClient<hector_nav_msgs::GetDistanceToObstacle>(distance_to_obstacle_service);
+      _distance_to_obstacle_service[class_id].reset(new ros::ServiceClient(ros::NodeHandle().serviceClient<hector_nav_msgs::GetDistanceToObstacle>(distance_to_obstacle_service)));
       bool project_objects = _project_objects.count(class_id) ? _project_objects.at(class_id) : _project_objects.at(std::string());
-      if (project_objects && !_distance_to_obstacle_service[class_id].waitForExistence(ros::Duration(5.0))) {
+      if (project_objects && !_distance_to_obstacle_service[class_id]->waitForExistence(ros::Duration(5.0))) {
         ROS_WARN_STREAM("project_objects is true, but GetDistanceToObstacle service is not (yet) available" << (!class_id.empty() ? "for class " + class_id : ""));
       }
+    }
+
+    if (priv_nh.hasParam(prefix + "get_normal_service")) {
+      std::string get_normal_service;
+      priv_nh.getParam(prefix + "get_normal_service", get_normal_service);
+      _get_normal_service[class_id].reset(new ros::ServiceClient(ros::NodeHandle().serviceClient<hector_nav_msgs::GetNormal>(get_normal_service)));
     }
 
     _per_class_parameters_loaded.insert(class_id);

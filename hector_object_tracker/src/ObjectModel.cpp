@@ -1,6 +1,6 @@
 #include "ObjectModel.h"
 #include "Object.h"
-#include "angles/angles.h"
+#include "parameters.h"
 
 namespace hector_object_tracker {
 
@@ -140,7 +140,7 @@ void ObjectModel::getVisualization(visualization_msgs::MarkerArray &markers) con
   }
 }
 
-float ObjectModel::getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose, const Eigen::Matrix3f& covariance, const std::string& class_id,const std::string& name, float max_distance) const
+float ObjectModel::getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose, const Eigen::Matrix3f& covariance, const std::string& class_id, const std::string& name, float max_distance) const
 {
   Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
   float min_distance = max_distance;
@@ -151,13 +151,15 @@ float ObjectModel::getBestCorrespondence(ObjectPtr &object, const tf::Pose& pose
   for(ObjectModel::const_iterator it = begin(); it != end(); ++it) {
     ObjectPtr x = *it;
     if (!class_id.empty() && class_id != x->getClassId()) continue;
-    if (class_id == "qrcode" && name != x->getName()) continue;
-    if (class_id == "victim") {
-        tf::Quaternion object_quaterion(x->getOrientation().x(),x->getOrientation().y(),x->getOrientation().z(),x->getOrientation().w());
+    if (!name.empty() && !x->getName().empty() && name != x->getName()) continue; // names must be distinct if set
+    if (parameter(_with_orientation, class_id)) {
+        tf::Quaternion other_orientation(x->getOrientation().x(), x->getOrientation().y(), x->getOrientation().z(), x->getOrientation().w());
+        tf::Quaternion this_orientation(pose.getRotation());
+        static const double MAXIMUM_ORIENTATION_DIFFERENCE = 110.0 * M_PI/180.0;
+        double orientation_difference = tf::angleShortestPath(this_orientation, other_orientation);
 
-        if (std::fabs(angles::shortest_angular_distance(tf::getYaw(object_quaterion),tf::getYaw(pose.getRotation()))) > angles::from_degrees(110.0)) {
+        if (orientation_difference > MAXIMUM_ORIENTATION_DIFFERENCE) {
             continue;
-
         }
     }
     Eigen::Vector3f diff = x->getPosition() - position;
@@ -197,7 +199,7 @@ void ObjectModel::merge(const ObjectPtr& object, tf::TransformListener &tf, cons
     // found corresondence
     ROS_DEBUG("Merging %s and %s", mine->getObjectId().c_str(), object->getObjectId().c_str());
     mine->setObjectId(mine->getObjectId() + "," + prefix + object->getObjectId());
-    mine->update(transformed->getPosition(), transformed->getCovariance(), object->getSupport());
+    mine->update(pose, transformed->getCovariance(), object->getSupport());
 
   } else {
     // add as new object

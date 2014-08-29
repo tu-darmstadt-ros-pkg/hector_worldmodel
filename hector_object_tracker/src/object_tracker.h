@@ -74,14 +74,11 @@ private:
   std::vector<NegativeUpdatePtr> negativeUpdate;
   void negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr &, const NegativeUpdatePtr& info);
 
-  ros::Publisher orientation_update_pub;
   ros::Publisher modelPublisher;
   ros::Publisher modelUpdatePublisher;
-  ros::Publisher poseDebugPublisher;
-  ros::Publisher pointDebugPublisher;
+  ros::Publisher perceptPoseDebugPublisher;
+  ros::Publisher objectPoseDebugPublisher;
   ros::Subscriber modelUpdateSubscriber;
-
-  ros::ServiceClient get_normal_octomap_service;
 
   ros::ServiceServer setObjectState;
   ros::ServiceServer addObject;
@@ -89,9 +86,6 @@ private:
   ros::ServiceServer setObjectName;
 
   ros::Timer publishTimer;
-
-  typedef std::pair<ros::ServiceClient,XmlRpc::XmlRpcValue> VerificationService;
-  std::map<std::string,std::map<std::string,std::vector<VerificationService> > > verificationServices;
 
   tf::TransformListener tf;
 

@@ -170,41 +170,48 @@ void Object::intersect(const tf::Pose& poseB, const Eigen::Matrix3f& covarianceB
 
   Eigen::Matrix3f A(covariance.inverse() * omega);
   Eigen::Matrix3f B(covarianceB.inverse() * (1.0f - omega));
+  double infA = 1./covariance.trace();
+  double infB = 1./covarianceB.trace();
 
   covariance = (A + B).inverse();
   position = covariance * (A * position + B * positionB);
+  updateOrientation(orientationB, infB / (infA + infB));
 
   setPosition(position);
+  setCovariance(covariance);
+  addSupport(support);
+}
 
-  // update orientation of victims using lowpass filtering
-  if (getClassId() == "victim") {
-      double low_pass_weight = 0.2;
-      tf::Quaternion q;
-      q.setValue(orientation.x(), orientation.y(), orientation.z(), orientation.w());
-      double filtered_yaw = tf::getYaw(q) + low_pass_weight*angles::shortest_angular_distance(tf::getYaw(q), tf::getYaw(orientationB));
+void Object::update(const tf::Pose& poseB, const Eigen::Matrix3f& covarianceB, float support) {
+  Eigen::Vector3f positionB(poseB.getOrigin().x(), poseB.getOrigin().y(), poseB.getOrigin().z());
+  tf::Quaternion orientationB = poseB.getRotation();
+    // old information is A , new information is B
 
-      q.setRPY(0.0, 0.0, filtered_yaw);
+  Eigen::Matrix3f A(covariance.inverse());
+  Eigen::Matrix3f B(covarianceB.inverse());
+  double infA = 1./covariance.trace();
+  double infB = 1./covarianceB.trace();
+
+  covariance = (A + B).inverse();
+  position = covariance * (A * position + B * positionB);
+  updateOrientation(orientationB, infB / (infA + infB));
+
+  setPosition(position);
+  setCovariance(covariance);
+  addSupport(support);
+}
+
+void Object::updateOrientation(const tf::Quaternion& orientationB, double slerp_factor) {
+  // update orientation of objects using low-pass filtering
+  if (parameter(_with_orientation, getClassId())) {
+      tf::Quaternion q(orientation.x(), orientation.y(), orientation.z(), orientation.w());
+      q.slerp(orientationB, slerp_factor);
       setOrientation(q);
   }
   // or simply set new orientation
   else {
     setOrientation(orientationB);
   }
-
-  setCovariance(covariance);
-  addSupport(support);
-}
-
-void Object::update(const Eigen::Vector3f& positionB, const Eigen::Matrix3f& covarianceB, float support) {
-  Eigen::Matrix3f A(covariance.inverse());
-  Eigen::Matrix3f B(covarianceB.inverse());
-
-  covariance = (A + B).inverse();
-  position = covariance * (A * position + B * positionB);
-
-  setPosition(position);
-  setCovariance(covariance);
-  addSupport(support);
 }
 
 void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {

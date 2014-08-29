@@ -23,6 +23,7 @@ ObjectTracker::ObjectTracker()
   priv_nh.param("publish_interval", _publish_interval, 0.0);
 
   parameter(_project_objects)   = false;
+  parameter(_with_orientation)  = false;
   parameter(_default_distance)  = 1.0;
   parameter(_distance_variance) = pow(1.0, 2);
   parameter(_angle_variance)    = pow(10.0 * M_PI / 180.0, 2);
@@ -53,51 +54,92 @@ ObjectTracker::ObjectTracker()
   model.setFrameId(_frame_id);
 
   sysCommandSubscriber = nh.subscribe("/syscommand", 10, &ObjectTracker::sysCommandCb, this);
-  poseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("pose", 10, false);
-  pointDebugPublisher = priv_nh.advertise<geometry_msgs::PointStamped>("point", 10, false);
-  orientation_update_pub = priv_nh.advertise<geometry_msgs::PoseStamped>("victim_orientation_normal", 10, false);
+  perceptPoseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("percept/pose", 10, false);
+  objectPoseDebugPublisher  = priv_nh.advertise<geometry_msgs::PoseStamped>("object/pose", 10, false);
 
   XmlRpc::XmlRpcValue verification_services;
   if (priv_nh.getParam("verification_services", verification_services) && verification_services.getType() == XmlRpc::XmlRpcValue::TypeArray) {
     for(int i = 0; i < verification_services.size(); ++i) {
       XmlRpc::XmlRpcValue item = verification_services[i];
       if (!item.hasMember("service")) {
-        ROS_ERROR("Verification service %d could not be intialized: unknown service name", i);
+        ROS_ERROR("Verification service %d could not be intialized: no service name given", i);
         continue;
       }
       if (!item.hasMember("type")) {
-        ROS_ERROR("Verification service %d could not be intialized: unknown service type", i);
+        ROS_ERROR("Verification service %d could not be intialized: no service type given", i);
         continue;
       }
 
-      ros::ServiceClient client;
+      ros::ServiceClientPtr client(new ros::ServiceClient);
       if (item["type"] == "object") {
-        client = nh.serviceClient<hector_worldmodel_msgs::VerifyObject>(item["service"]);
+        *client = nh.serviceClient<hector_worldmodel_msgs::VerifyObject>(item["service"]);
       } else if (item["type"] == "percept") {
-        client = nh.serviceClient<hector_worldmodel_msgs::VerifyPercept>(item["service"]);
+        *client = nh.serviceClient<hector_worldmodel_msgs::VerifyPercept>(item["service"]);
       }
 
-      if (!client.isValid()) continue;
-      if (!client.exists()) {
+      if (!client || !client->isValid()) continue;
+      if (!client->exists()) {
         if (!item.hasMember("required") || !item["required"]) {
-          ROS_WARN("Verification service %s is not (yet) there...", client.getService().c_str());
+          ROS_WARN("Verification service %s is not (yet) there...", client->getService().c_str());
         } else {
-          ROS_WARN("Required verification service %s is not available... waiting...", client.getService().c_str());
-          while(ros::ok() && !client.waitForExistence(ros::Duration(1.0)));
+          ROS_WARN("Required verification service %s is not available... waiting...", client->getService().c_str());
+          while(ros::ok() && !client->waitForExistence(ros::Duration(1.0)));
         }
       }
 
-      if (item.hasMember("class_id")) {
-        verificationServices[item["type"]][item["class_id"]].push_back(std::make_pair(client, item));
-        ROS_INFO("Using %s verification service %s for objects of class %s", std::string(item["type"]).c_str(), client.getService().c_str(), std::string(item["class_id"]).c_str());
-      } else {
-        verificationServices[item["type"]]["*"].push_back(std::make_pair(client, item));
-        ROS_INFO("Using %s verification service %s", std::string(item["type"]).c_str(), client.getService().c_str());
+      std::string class_id;
+      if (item.hasMember("class_id")) class_id = std::string(item["class_id"]);
+
+      if (item["type"] == "object") {
+        parameter(_object_verification_services, class_id).push_back(std::make_pair(client, item));
+        if (class_id.empty()) {
+          ROS_INFO("Using object verification service %s for all object classes", client->getService().c_str());
+        } else {
+          ROS_INFO("Using object verification service %s for objects of class %s", client->getService().c_str(), class_id.c_str());
+        }
+      } else if (item["type"] == "percept") {
+        parameter(_percept_verification_services, class_id).push_back(std::make_pair(client, item));
+        if (class_id.empty()) {
+          ROS_INFO("Using percept verification service %s for all percept classes", client->getService().c_str());
+        } else {
+          ROS_INFO("Using percept verification service %s for percepts of class %s", client->getService().c_str(), class_id.c_str());
+        }
       }
     }
   }
 
-  get_normal_octomap_service = nh.serviceClient<hector_nav_msgs::GetNormal>("hector_octomap_server/get_normal");
+//  XmlRpc::XmlRpcValue get_normal_service;
+//  if (priv_nh.getParam("get_normal_services", get_normal_service) && get_normal_service.getType() == XmlRpc::XmlRpcValue::TypeArray) {
+//    for(int i = 0; i < get_normal_service.size(); ++i) {
+//      XmlRpc::XmlRpcValue item = get_normal_service[i];
+//      if (!item.hasMember("service")) {
+//        ROS_ERROR("GetNormal service %d could not be intialized: no service name given", i);
+//        continue;
+//      }
+
+//      ros::ServiceClientPtr client(new ros::ServiceClient);
+//      *client = nh.serviceClient<hector_nav_msgs::GetNormal>(item["service"]);
+
+//      if (!client || !client->isValid()) continue;
+//      if (!client->exists()) {
+//        if (!item.hasMember("required") || !item["required"]) {
+//          ROS_WARN("GetNormal service %s is not (yet) there...", client->getService().c_str());
+//        } else {
+//          ROS_WARN("Required GetNormal service %s is not available... waiting...", client->getService().c_str());
+//          while(ros::ok() && !client->waitForExistence(ros::Duration(1.0)));
+//        }
+//      }
+
+//      if (item.hasMember("class_id")) {
+//        parameter(_get_normal_service, item["class_id"]) = client;
+//        ROS_INFO("Using GetNormal service %s for objects of class %s", client->getService().c_str(), std::string(item["class_id"]).c_str());
+//      } else {
+//        parameter(_get_normal_service) = client;
+//        ROS_INFO("Using GetNormal service %s for all object classes", client->getService().c_str());
+//      }
+//    }
+//  }
+
   setObjectState = worldmodel.advertiseService("set_object_state", &ObjectTracker::setObjectStateCb, this);
   setObjectName  = worldmodel.advertiseService("set_object_name", &ObjectTracker::setObjectNameCb, this);
   addObject = worldmodel.advertiseService("add_object", &ObjectTracker::addObjectCb, this);
@@ -195,16 +237,36 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
   // retrieve camera model from either the cache or from CameraInfo given in the percept
   CameraModelPtr cameraModel = getCameraModel(percept->header.frame_id, percept->camera_info);
 
-  // transform Point using the camera mode
+  // transform Point using the camera model
   cv::Point2d rectified = cameraModel->rectifyPoint(cv::Point2d(percept->x, percept->y));
   cv::Point3d direction_cv = cameraModel->projectPixelTo3dRay(rectified);
+  tf::Point direction(direction_cv.x, direction_cv.y, direction_cv.z);
+  direction.normalize();
 //  pose.setOrigin(tf::Point(direction_cv.z, -direction_cv.x, -direction_cv.y).normalized() * distance);
 //  tf::Quaternion direction(atan2(-direction_cv.x, direction_cv.z), atan2(direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
   pose.setOrigin(tf::Point(direction_cv.x, direction_cv.y, direction_cv.z).normalized() * distance);
-  tf::Quaternion direction;
-  direction.setEuler(atan2(direction_cv.x, direction_cv.z), atan2(-direction_cv.y, sqrt(direction_cv.z*direction_cv.z + direction_cv.x*direction_cv.x)), 0.0);
-  direction = direction * tf::Quaternion(0.5, -0.5, 0.5, 0.5);
-  pose.getBasis().setRotation(direction);
+  {
+    // set rotation of object so that the x-axis points in the direction of the object and y-axis is parallel to the camera's x-z-plane
+    // Note: d is given in camera coordinates, while the object's x-axis should point away from the camera.
+    const tf::Point &d(direction); // for readability
+    if (d.y() >= 0.999) {
+      pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
+                                   1.,  0.,  0.,
+                                   0.,  0.,  1. ));
+    } else if (d.y() <= -0.999) {
+      pose.setBasis(tf::Matrix3x3( 0., -1.,  0.,
+                                  -1.,  0.,  0.,
+                                   0.,  0., -1.));
+    } else {
+      double c = 1./sqrt(1. - d.y()*d.y());
+//      pose.setBasis(tf::Matrix3x3( c*d.z(), -c*d.x()*d.y(), d.x(),
+//                                         0, 1./c,           d.y(),
+//                                  -c*d.x(), -c*d.y()*d.z(), d.z()));
+      pose.setBasis(tf::Matrix3x3(d.x(), -c*d.z(), c*d.x()*d.y(),
+                                  d.y(),        0,         -1./c,
+                                  d.z(),  c*d.x(), c*d.y()*d.z() ));
+    }
+  }
 
   ROS_DEBUG("--> Rectified image coordinates: [%f,%f]", rectified.x, rectified.y);
   ROS_DEBUG("--> Projected 3D ray (OpenCV):   [%f,%f,%f]", direction_cv.x, direction_cv.y, direction_cv.z);
@@ -217,37 +279,19 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
     // project image percept to the next obstacle
     request.point.header = percept->header;
     tf::pointTFToMsg(pose.getOrigin(), request.point.point);
-    if (parameter(_distance_to_obstacle_service, percept->info.class_id).call(request, response)) {
+    ros::ServiceClientPtr client = parameter(_distance_to_obstacle_service, percept->info.class_id);
+    if (client && client->call(request, response)) {
       if (response.distance > 0.0) {
-        // @TODO: Maybe possible for all types?
-        if (percept->info.class_id == "victim") {
-          tf::StampedTransform transform;
-          if (!response.end_point.header.frame_id.empty() && tf.resolve(percept->header.frame_id) != tf.resolve(response.end_point.header.frame_id)) {
-            // retrieve camera transformation from tf
-            try {
-              tf.waitForTransform(percept->header.frame_id, response.end_point.header.frame_id, percept->header.stamp, ros::Duration(1.0));
-              tf.lookupTransform(percept->header.frame_id, response.end_point.header.frame_id, percept->header.stamp, transform);
-            } catch (tf::TransformException& ex) {
-              ROS_ERROR("%s", ex.what());
-              return;
-            }
-          }
-
-          tf::Vector3 point(response.end_point.point.x, response.end_point.point.y, response.end_point.point.z);
-          point = transform*point; // we need to transform to percept frame
-          pose.setOrigin(point);
-        } else {
-          // distance = std::max(response.distance - 0.1f, 0.0f);
-          distance = std::max(response.distance, 0.0f);
-          pose.setOrigin(pose.getOrigin().normalized() * distance);
-          ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
-        }
+        // distance = std::max(response.distance - 0.1f, 0.0f);
+        distance = std::max(response.distance, 0.0f);
+        pose.setOrigin(pose.getOrigin().normalized() * distance);
+        ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
       } else {
-        ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s returned %f", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str(), response.distance);
+        ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s returned %f", client->getService().c_str(), response.distance);
         return;
       }
     } else {
-      ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service %s is not available", parameter(_distance_to_obstacle_service, percept->info.class_id).getService().c_str());
+      ROS_DEBUG("Ignoring percept due to unknown or infinite distance: service is not available");
       return;
     }
   }
@@ -259,8 +303,10 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
   covariance(2,2) = parameter(_distance_variance, percept->info.class_id);
 
   // rotate covariance matrix depending on the position in the image
-  Eigen::Quaterniond eigen_rotation(direction.w(), direction.x(), direction.y(), direction.z());
-  Eigen::Matrix3f rotation_camera_object(eigen_rotation.toRotationMatrix().cast<float>());
+  Eigen::Matrix3f rotation_camera_object;
+  rotation_camera_object << pose.getBasis()[0][0], pose.getBasis()[0][1], pose.getBasis()[0][2],
+                            pose.getBasis()[1][0], pose.getBasis()[1][1], pose.getBasis()[1][2],
+                            pose.getBasis()[2][0], pose.getBasis()[2][1], pose.getBasis()[2][2];
   covariance = rotation_camera_object * covariance * rotation_camera_object.transpose();
 
   // fill posePercept
@@ -286,45 +332,43 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   Parameters::load(percept->info.class_id);
 
   // publish pose in source frame for debugging purposes
-  if (poseDebugPublisher.getNumSubscribers() > 0) {
+  if (perceptPoseDebugPublisher.getNumSubscribers() > 0) {
     geometry_msgs::PoseStamped pose;
     pose.pose = percept->pose.pose;
     pose.header = percept->header;
-    poseDebugPublisher.publish(pose);
+    perceptPoseDebugPublisher.publish(pose);
   }
 
   // call percept verification
   float support_added_by_percept_verification = 0.0;
-  if (verificationServices.count("percept") > 0) {
+  ServiceClientsWithProperties &percept_verification_services = parameter(_percept_verification_services, percept->info.class_id);
+  if (!percept_verification_services.empty()) {
     hector_worldmodel_msgs::VerifyPercept::Request request;
     hector_worldmodel_msgs::VerifyPercept::Response response;
 
     request.percept = *percept;
 
-    std::vector<VerificationService> services(verificationServices["percept"]["*"]);
-    if (!percept->info.class_id.empty()) {
-      services.insert(services.end(), verificationServices["percept"][percept->info.class_id].begin(), verificationServices["percept"][percept->info.class_id].end());
-    }
+    for(ServiceClientsWithProperties::iterator it = percept_verification_services.begin(); it != percept_verification_services.end(); ++it) {
+      if (!(it->first) || !(it->first->isValid())) continue;
 
-    for(std::vector<VerificationService>::iterator it = services.begin(); it != services.end(); ++it) {
       if (it->second.hasMember("ignore") && it->second["ignore"]) {
-        ROS_DEBUG("Calling service %s for percept of class '%s'', but ignoring its answer...", it->first.getService().c_str(), percept->info.class_id.c_str());
-        it->first.call(request, response);
+        ROS_DEBUG("Calling service %s for percept of class '%s'', but ignoring its answer...", it->first->getService().c_str(), percept->info.class_id.c_str());
+        it->first->call(request, response);
 
-      } else if (it->first.call(request, response)) {
+      } else if (it->first->call(request, response)) {
         if (response.response == response.DISCARD) {
-          ROS_DEBUG("Discarded percept of class '%s' due to DISCARD message from service %s", percept->info.class_id.c_str(), it->first.getService().c_str());
+          ROS_DEBUG("Discarded percept of class '%s' due to DISCARD message from service %s", percept->info.class_id.c_str(), it->first->getService().c_str());
           return;
         }
         if (response.response == response.CONFIRM) {
-          ROS_DEBUG("We got a CONFIRMation for percept of class '%s' from service %s!", percept->info.class_id.c_str(), it->first.getService().c_str());
+          ROS_DEBUG("We got a CONFIRMation for percept of class '%s' from service %s!", percept->info.class_id.c_str(), it->first->getService().c_str());
           support_added_by_percept_verification = 100.0;
         }
         if (response.response == response.UNKNOWN) {
-          ROS_DEBUG("Verification service %s cannot help us with percept of class %s at the moment :-(", it->first.getService().c_str(), percept->info.class_id.c_str());
+          ROS_DEBUG("Verification service %s cannot help us with percept of class %s at the moment :-(", it->first->getService().c_str(), percept->info.class_id.c_str());
         }
       } else if (it->second.hasMember("required") && it->second["required"]) {
-        ROS_DEBUG("Discarded percept of class '%s' as required service %s is not available", percept->info.class_id.c_str(), it->first.getService().c_str());
+        ROS_DEBUG("Discarded percept of class '%s' as required service %s is not available", percept->info.class_id.c_str(), it->first->getService().c_str());
         return;
       }
     }
@@ -383,8 +427,10 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     pose = cameraTransform * pose;
 
     // rotate covariance matrix to map coordinates
-    Eigen::Quaterniond eigen_rotation(cameraTransform.getRotation().w(), cameraTransform.getRotation().x(), cameraTransform.getRotation().y(), cameraTransform.getRotation().z());
-    Eigen::Matrix3f rotation_map_camera(eigen_rotation.toRotationMatrix().cast<float>());
+    Eigen::Matrix3f rotation_map_camera;
+    rotation_map_camera << cameraTransform.getBasis()[0][0], cameraTransform.getBasis()[0][1], cameraTransform.getBasis()[0][2],
+                           cameraTransform.getBasis()[1][0], cameraTransform.getBasis()[1][1], cameraTransform.getBasis()[1][2],
+                           cameraTransform.getBasis()[2][0], cameraTransform.getBasis()[2][1], cameraTransform.getBasis()[2][2];
     covariance = rotation_map_camera * covariance * rotation_map_camera.transpose();
   }
 
@@ -395,67 +441,49 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     return;
   }
 
-  // estimate victim orienation from normal in octomap
-  if (false){
+  // get object orientation from normal to the wall
+  ros::ServiceClientPtr get_normal_client = parameter(_get_normal_service, percept->info.class_id);
+  if (get_normal_client) {
+    // Get normal at object's position
+    hector_nav_msgs::GetNormal get_normal;
+    get_normal.request.point.point.x = pose.getOrigin().x();
+    get_normal.request.point.point.y = pose.getOrigin().y();
+    get_normal.request.point.point.z = pose.getOrigin().z();
+    get_normal.request.point.header.frame_id = "map";
+    get_normal.request.point.header.stamp = percept->header.stamp;
 
-    if (percept->info.class_id == "victim")
-    {
-      //Calculate normal at victim position
-      hector_nav_msgs::GetNormal get_normal;
-      Eigen::Vector3f position(pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z());
+    if (get_normal_client->call(get_normal.request, get_normal.response)) {
+      tf::Vector3 normal(get_normal.response.normal.x, get_normal.response.normal.y, get_normal.response.normal.z);
+      normal.normalize(); // we don't trust the server :-)
 
-      get_normal.request.point.point.x = position.x();
-      get_normal.request.point.point.y = position.y();
-      get_normal.request.point.point.z = position.z();
-      get_normal.request.point.header.frame_id = "map";
-      get_normal.request.point.header.stamp = percept->header.stamp;
-      tf::StampedTransform robotPoseTransform;
-
-      try{
-        tf.lookupTransform ( _frame_id,"base_link", percept->header.stamp, robotPoseTransform);
-        tf::Pose pose_robot;
-        pose_robot.setOrigin(robotPoseTransform.getOrigin());
-        pose_robot.setRotation(robotPoseTransform.getRotation());
-
-        get_normal.request.point_on_correct_side.point.x = pose_robot.getOrigin().x();
-        get_normal.request.point_on_correct_side.point.y = pose_robot.getOrigin().y();
-        get_normal.request.point_on_correct_side.point.z = pose_robot.getOrigin().z();
-        get_normal.request.point_on_correct_side.header.frame_id = percept->header.frame_id;
-        get_normal.request.point_on_correct_side.header.stamp = percept->header.stamp;
-
-        if ( get_normal_octomap_service.call(get_normal.request, get_normal.response)){
-
-          tf::Quaternion rotation = pose.getRotation();
-          double yaw_pose = get_normal.response.yaw+M_PI;
-          if (yaw_pose>2*M_PI){
-            yaw_pose = yaw_pose-(2*M_PI);
-          }
-          rotation.setRPY(0.0, 0.0, yaw_pose);
-          pose.setRotation(rotation);
-          ROS_DEBUG( "The yaw for the victim was calculated by using normals:  %f ",yaw_pose);
-
-        }
-        else{
-
-          double not_normal_yaw=atan2(pose_robot.getOrigin().y()-get_normal.request.point.point.y, pose_robot.getOrigin().x()-get_normal.request.point.point.x);
-          tf::Quaternion rotation = pose.getRotation();
-          // We do not want the actual normal direction but the direction pointing towards the victim
-          not_normal_yaw=not_normal_yaw+M_PI;
-          if (not_normal_yaw>2*M_PI){
-            not_normal_yaw = not_normal_yaw-(2*M_PI);
-          }
-          rotation.setRPY(0.0,0.0, not_normal_yaw);
-          pose.setRotation(rotation);
-          ROS_DEBUG( "The yaw for the victim was calculated by NOT using normals: %f ",not_normal_yaw);
-        }
-
-      }
-      catch (tf::TransformException& ex) {
-        ROS_ERROR("Could not calculate proper normal orientation due to missing robot pose %s", ex.what());
-        return;
+      // invert normal if it points away from the percept's x-axis
+      if (pose.getBasis().getRow(0) * normal < 0) {
+        normal = -normal;
       }
 
+      {
+        // set rotation of object so that the x-axis points in the direction of the normal and y-axis is parallel to the x-y-plane
+        const tf::Point &n(normal); // for readability
+        if (n.z() >= 0.999) {
+          pose.setBasis(tf::Matrix3x3(0, 0, -1., 0, 1., 0, 1., 0, 0));
+        } else if (n.z() <= -0.999) {
+          pose.setBasis(tf::Matrix3x3(0, 0, 1., 0, 1., 0, -1., 0, 0));
+        } else {
+          double c = 1./sqrt(1. - n.z()*n.z());
+          pose.setBasis(tf::Matrix3x3(n.x(), -c*n.y(), -c*n.x()*n.z(),
+                                      n.y(),  c*n.x(), -c*n.y()*n.z(),
+                                      n.z(),        0, 1./c));
+        }
+      }
 
+      tfScalar r,p,y;
+      pose.getBasis().getRPY(r, p, y);
+      ROS_DEBUG("Object orientation was updated from wall normals: %f", y * 180./M_PI);
+
+    } else {
+      tfScalar r,p,y;
+      pose.getBasis().getRPY(r, p, y);
+      ROS_DEBUG("View angle was used as object orientation: %f", y * 180./M_PI);
     }
   }
 
@@ -504,7 +532,7 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
 
   // or update existing object
   } else if (support > 0.0) {
-    //object->update(position, covariance, support);
+    //object->update(pose, covariance, support);
     object->intersect(pose, covariance, support);
 
   // or simply decrease support
@@ -537,62 +565,44 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   model.unlock();
 
   // call object verification
-  if (verificationServices.count("object") > 0) {
+  ServiceClientsWithProperties &object_verification_services = parameter(_object_verification_services, percept->info.class_id);
+  if (!object_verification_services.empty()) {
     hector_worldmodel_msgs::VerifyObject::Request request;
     hector_worldmodel_msgs::VerifyObject::Response response;
 
     object->getMessage(request.object);
 
-    std::vector<VerificationService> services(verificationServices["object"]["*"]);
-    if (!object->getClassId().empty()) {
-      services.insert(services.end(), verificationServices["object"][object->getClassId()].begin(), verificationServices["object"][object->getClassId()].end());
-    }
-
-    for(std::vector<VerificationService>::iterator it = services.begin(); it != services.end(); ++it) {
+    for(ServiceClientsWithProperties::iterator it = object_verification_services.begin(); it != object_verification_services.end(); ++it) {
       if (it->second.hasMember("ignore") && it->second["ignore"]) {
-        ROS_DEBUG("Calling service %s for object %s, but ignoring its answer...", it->first.getService().c_str(), object->getObjectId().c_str());
-        it->first.call(request, response);
+        ROS_DEBUG("Calling service %s for object %s, but ignoring its answer...", it->first->getService().c_str(), object->getObjectId().c_str());
+        it->first->call(request, response);
 
-      } else if (it->first.call(request, response)) {
+      } else if (it->first->call(request, response)) {
         if (response.response == response.DISCARD) {
-          ROS_DEBUG("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->first.getService().c_str());
+          ROS_DEBUG("Discarded object %s due to DISCARD message from service %s", object->getObjectId().c_str(), it->first->getService().c_str());
           object->setState(ObjectState::DISCARDED);
         }
         if (response.response == response.CONFIRM) {
-          ROS_DEBUG("We got a CONFIRMation for object %s from service %s!", object->getObjectId().c_str(), it->first.getService().c_str());
+          ROS_DEBUG("We got a CONFIRMation for object %s from service %s!", object->getObjectId().c_str(), it->first->getService().c_str());
           object->addSupport(100.0);
         }
         if (response.response == response.UNKNOWN) {
-          ROS_DEBUG("Verification service %s cannot help us with object %s at the moment :-(", it->first.getService().c_str(), object->getObjectId().c_str());
+          ROS_DEBUG("Verification service %s cannot help us with object %s at the moment :-(", it->first->getService().c_str(), object->getObjectId().c_str());
         }
       } else if (it->second.hasMember("required") && it->second["required"]) {
-        ROS_DEBUG("Discarded object %s as required service %s is not available", object->getObjectId().c_str(), it->first.getService().c_str());
+        ROS_DEBUG("Discarded object %s as required service %s is not available", object->getObjectId().c_str(), it->first->getService().c_str());
         object->setState(ObjectState::DISCARDED);
       }
     }
   }
 
-  // publish point in target frame for debugging purposes
-  if (pointDebugPublisher.getNumSubscribers() > 0) {
-    geometry_msgs::PointStamped point;
-    geometry_msgs::Pose pose;
-    object->getPose(pose);
-    point.point = pose.position;
-    point.point = pose.position;
-    point.header = object->getHeader();
-    pointDebugPublisher.publish(point);
+  // publish pose in target frame for debugging purposes
+  if (objectPoseDebugPublisher.getNumSubscribers() > 0) {
+    geometry_msgs::PoseStamped pose;
+    object->getPose(pose.pose);
+    pose.header = object->getHeader();
+    objectPoseDebugPublisher.publish(pose);
   }
-
-  // visualize the updated orientation of a victim for debugging
-  if (orientation_update_pub.getNumSubscribers() > 0) {
-      tf::Pose pose_ob;
-      object->getPose(pose_ob);
-      geometry_msgs::PoseStamped pose_pub;
-      tf::poseTFToMsg(pose_ob, pose_pub.pose);
-      pose_pub.header = header;
-      orientation_update_pub.publish(pose_pub);
-  }
-
 
   modelUpdatePublisher.publish(object->getMessage());
   publishModel();
@@ -860,9 +870,10 @@ void ObjectTracker::negativeUpdateCallback(const sensor_msgs::CameraInfoConstPtr
 
 bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const std_msgs::Header &header, const ObjectInfo &info, geometry_msgs::Pose &mapped) {
   Parameters::load(info.class_id);
+  ros::ServiceClientPtr client = parameter(_distance_to_obstacle_service, info.class_id);
 
-  if (!parameter(_distance_to_obstacle_service, info.class_id).exists()) {
-    ROS_ERROR("Could not map object to next obstacle as the distance service %s is not available", parameter(_distance_to_obstacle_service, info.class_id).getService().c_str());
+  if (!client || !client->exists()) {
+    ROS_ERROR("Could not map object to next obstacle as the distance service %s is not available", client->getService().c_str());
     return false;
   }
 
@@ -878,7 +889,7 @@ bool ObjectTracker::mapToNextObstacle(const geometry_msgs::Pose& source, const s
   // tf::Quaternion direction_quaternion = tf::Quaternion(atan(direction.y/direction.x), atan(direction.z/direction.x), 0.0);
   // direction_quaternion *= cameraTransform.getRotation();
   // tf::quaternionTFToMsg(direction_quaternion, request.pose.pose.orientation);
-  if (parameter(_distance_to_obstacle_service, info.class_id).call(request, response) && response.distance > 0.0) {
+  if (client->call(request, response) && response.distance > 0.0) {
     // distance = std::max(response.distance - 0.1f, 0.0f);
     distance = std::max(response.distance, 0.0f);
   } else {
@@ -953,7 +964,7 @@ void ObjectTracker::publishModel() {
   // Publish all model data on topic /objects
   modelPublisher.publish(merged_model.getMessage());
 
-  // Visualize victims and covariance in rviz
+  // Visualize objects and covariance in rviz
   visualization_msgs::MarkerArray markers;
   merged_model.getVisualization(markers);
 //  drawings.setTime(ros::Time::now());
@@ -981,4 +992,3 @@ int main(int argc, char **argv)
 
   exit(0);
 }
-

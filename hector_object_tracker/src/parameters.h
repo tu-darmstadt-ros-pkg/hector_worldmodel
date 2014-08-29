@@ -34,9 +34,12 @@
 #include <std_msgs/ColorRGBA.h>
 #include <ros/service_client.h>
 
+#include <XmlRpcValue.h>
+
 namespace hector_object_tracker {
 
   extern std::map<std::string, bool>   _project_objects;
+  extern std::map<std::string, bool>   _with_orientation;
   extern std::map<std::string, double> _default_distance;
   extern std::map<std::string, double> _distance_variance;
   extern std::map<std::string, double> _angle_variance;
@@ -49,7 +52,13 @@ namespace hector_object_tracker {
   extern std::map<std::string, double> _inactive_support;
   extern std::map<std::string, double> _inactive_time;
   extern std::map<std::string, std_msgs::ColorRGBA> _marker_color;
-  extern std::map<std::string, ros::ServiceClient> _distance_to_obstacle_service;
+  extern std::map<std::string, ros::ServiceClientPtr> _distance_to_obstacle_service;
+  extern std::map<std::string, ros::ServiceClientPtr> _get_normal_service;
+
+  typedef std::pair<ros::ServiceClientPtr, XmlRpc::XmlRpcValue> ServiceClientWithProperties;
+  typedef std::vector<ServiceClientWithProperties> ServiceClientsWithProperties;
+  extern std::map<std::string, ServiceClientsWithProperties> _percept_verification_services;
+  extern std::map<std::string, ServiceClientsWithProperties> _object_verification_services;
 
   namespace Parameters {
     void load(const std::string& class_id = std::string());

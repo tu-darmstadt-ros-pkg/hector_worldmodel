@@ -31,7 +31,6 @@
   <build_depend>hector_nav_msgs</build_depend>
   <build_depend>hector_marker_drawing</build_depend>
   <build_depend>cmake_modules</build_depend>
-  <build_depend>angles</build_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
   <run_depend>roscpp</run_depend>
