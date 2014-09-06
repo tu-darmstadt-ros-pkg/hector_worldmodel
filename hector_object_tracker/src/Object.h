@@ -117,6 +117,8 @@ public:
     ObjectPtr transform(tf::Transformer& tf, const std::string& target_frame) const;
     ObjectPtr transform(tf::Transformer& tf, const std::string& target_frame, const ros::Time& target_time) const;
 
+    double getDistance(const Object &other);
+
 private:
     ros::NodeHandle nh;
     std_msgs::Header header;

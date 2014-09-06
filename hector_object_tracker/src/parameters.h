@@ -51,6 +51,7 @@ namespace hector_object_tracker {
   extern std::map<std::string, double> _active_time;
   extern std::map<std::string, double> _inactive_support;
   extern std::map<std::string, double> _inactive_time;
+  extern std::map<std::string, double> _min_distance_between_objects;
   extern std::map<std::string, std_msgs::ColorRGBA> _marker_color;
   extern std::map<std::string, ros::ServiceClientPtr> _distance_to_obstacle_service;
   extern std::map<std::string, ros::ServiceClientPtr> _get_normal_service;

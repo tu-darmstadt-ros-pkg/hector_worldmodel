@@ -35,6 +35,7 @@ ObjectTracker::ObjectTracker()
   parameter(_active_time)       = 0.0;
   parameter(_inactive_support)  = 0.0;
   parameter(_inactive_time)     = 0.0;
+  parameter(_min_distance_between_objects) = 0.0;
 
   std_msgs::ColorRGBA default_color;
   default_color.r = 0.8; default_color.a = 1.0;
@@ -676,25 +677,23 @@ bool ObjectTracker::setObjectStateCb(hector_worldmodel_msgs::SetObjectState::Req
     return false;
   }
 
+  object->setState(request.new_state.state);
+  modelUpdatePublisher.publish(object->getMessage());
 
-
-  //if a victim is confirmed ignore all victims in an area of 0.2m around this victim
-  if ((object->getClassId()=="victim") && (request.new_state.state==hector_worldmodel_msgs::ObjectState::CONFIRMED)){
+  // check minimum distance between objects and discard objects which are closer
+  double min_distance_between_objects = parameter(_min_distance_between_objects, object->getClassId());
+  if ((min_distance_between_objects > 0.0) && (request.new_state.state == hector_worldmodel_msgs::ObjectState::CONFIRMED)) {
     for(ObjectModel::iterator it = model.begin(); it != model.end(); ++it) {
-      ObjectPtr current_obj = *it;
-      if (current_obj->getClassId() == "victim"){
-        double distance = sqrt((current_obj->getPosition().x() - object->getPosition().x())*(current_obj->getPosition().x() - object->getPosition().x())+
-                            (current_obj->getPosition().y() - object->getPosition().y())*(current_obj->getPosition().y() - object->getPosition().y()));
-        if (distance < 0.3) {
-          current_obj->setState(hector_worldmodel_msgs::ObjectState::DISCARDED);
-        }
+      ObjectPtr other = *it;
+      if (other == object) continue;
+      if (other->getClassId() != object->getClassId()) continue;
+
+      if (other->getDistance(*object) < min_distance_between_objects) {
+        other->setState(hector_worldmodel_msgs::ObjectState::DISCARDED);
+        modelUpdatePublisher.publish(other->getMessage());
       }
     }
   }
-
-  object->setState(request.new_state.state);
-
-  modelUpdatePublisher.publish(object->getMessage());
 
   model.unlock();
   publishModel();

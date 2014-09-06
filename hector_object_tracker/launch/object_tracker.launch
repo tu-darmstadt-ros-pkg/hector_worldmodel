@@ -15,6 +15,7 @@
           marker_color: [0.8, 0.0, 0.0]
           with_orientation: true
           #get_normal_service: hector_octomap_server/get_normal
+          min_distance_between_objects: 0.3
         qrcode:
           active_support: 1.0
           marker_color: [0.0, 0.0, 0.8]

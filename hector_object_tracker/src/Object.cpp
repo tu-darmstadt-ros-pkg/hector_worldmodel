@@ -317,4 +317,9 @@ ObjectPtr Object::transform(tf::Transformer& tf, const std::string& target_frame
   return result;
 }
 
+double Object::getDistance(const Object &other)
+{
+  return (this->getPosition() - other.getPosition()).norm();
+}
+
 } // namespace hector_object_tracker
