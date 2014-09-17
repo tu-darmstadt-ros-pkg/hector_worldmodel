@@ -21,6 +21,7 @@
   <depend package="roscpp" />
   <depend package="tf" />
   <depend package="image_geometry" />
+  <depend package="opencv2" />
 
   <depend package="hector_worldmodel_msgs" />
   <depend package="hector_nav_msgs" />
