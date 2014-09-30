@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+
+<launch>
+    <node pkg="hector_object_tracker" type="object_tracker" name="object_tracker" output="screen">
+      <param name="project_objects" type="bool" value="true" />
+      <param name="angle_variance" type="double" value="0.121846968"/>
+      <param name="publish_interval" type="double" value="1.0" />
+
+      <rosparam>
+        victim:
+          pending_support: 1.0
+          active_support: 10.0
+          min_height: -0.5
+          max_height: 0.5
+          marker_color: [0.8, 0.0, 0.0]
+          with_orientation: true
+          #get_normal_service: hector_octomap_server/get_normal
+          min_distance_between_objects: 0.3
+        qrcode:
+          active_support: 1.0
+          marker_color: [0.0, 0.0, 0.8]
+        verification_services:
+          allow_none: true
+        negative_update:
+          - topic: thermal/camera_info
+            class_id: victim
+            min_distance: 0.1
+            max_distance: 1.6
+            negative_support: 0.5
+      </rosparam>
+
+      <remap from="visualization_marker" to="worldmodel/visualization_marker" />
+      <remap from="visualization_marker_array" to="worldmodel/visualization_marker_array" />
+    </node>
+</launch>
