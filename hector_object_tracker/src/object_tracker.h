@@ -1,6 +1,9 @@
 #ifndef OBJECT_TRACKER_OBJECT_TRACKER_H
 #define OBJECT_TRACKER_OBJECT_TRACKER_H
 
+// HOT FIX UBUNTU 14.10
+#include <opencv/cv.h>
+
 #include <ros/ros.h>
 #include <tf/tf.h>
 #include <std_msgs/String.h>
