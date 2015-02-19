@@ -221,8 +221,113 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
   }
 }
 
-void userPerceptCb(const hector_worldmodel_msgs::UserPerceptConstPtr &){
+void ObjectTracker::userPerceptCb(const hector_worldmodel_msgs::UserPerceptConstPtr &percept){
 
+
+    Parameters::load(percept->info.class_id);
+
+    // publish pose in source frame for debugging purposes
+    if (perceptPoseDebugPublisher.getNumSubscribers() > 0) {
+      geometry_msgs::PoseStamped pose;
+      pose.pose = percept->pose;
+      pose.header = percept->header;
+      perceptPoseDebugPublisher.publish(pose);
+    }
+
+    // convert pose in tf
+    tf::Pose pose;
+    tf::poseMsgToTF(percept->pose, pose);
+
+    //TODO CHECK and understand this covariance stuff !!!!! ------------------------------- !!!!!!!!!!!!!!!!!
+
+    // if no variance is given, set variance to default
+    Eigen::Matrix3f covariance;
+
+      covariance(0,0) = parameter(_distance_variance, percept->info.class_id);
+      covariance(1,1) = parameter(_distance_variance, percept->info.class_id);
+      covariance(2,2) = parameter(_distance_variance, percept->info.class_id);
+
+
+    // project percept coordinates to map frame
+    tf::StampedTransform cameraTransform;
+    if (!_frame_id.empty() && tf.resolve(percept->header.frame_id) != tf.resolve(_frame_id)) {
+      ROS_DEBUG("Transforming percept from %s frame to %s frame", percept->header.frame_id.c_str(), _frame_id.c_str());
+
+      // retrieve camera transformation from tf
+      try {
+        tf.waitForTransform(_frame_id, percept->header.frame_id, percept->header.stamp, ros::Duration(1.0));
+        tf.lookupTransform(_frame_id, percept->header.frame_id, percept->header.stamp, cameraTransform);
+      } catch (tf::TransformException& ex) {
+        ROS_ERROR("%s", ex.what());
+        return;
+      }
+
+      pose = cameraTransform * pose;
+
+      // rotate covariance matrix to map coordinates
+      Eigen::Matrix3f rotation_map_camera;
+      rotation_map_camera << cameraTransform.getBasis()[0][0], cameraTransform.getBasis()[0][1], cameraTransform.getBasis()[0][2],
+                             cameraTransform.getBasis()[1][0], cameraTransform.getBasis()[1][1], cameraTransform.getBasis()[1][2],
+                             cameraTransform.getBasis()[2][0], cameraTransform.getBasis()[2][1], cameraTransform.getBasis()[2][2];
+      covariance = rotation_map_camera * covariance * rotation_map_camera.transpose();
+    }
+
+    // TODO NEED TO CKECK IF HEIGHT discarding does not occur on later spots if we avoid it here
+
+    // calculate observation support
+    float support = 0.0;
+    if (!percept->info.object_id.empty()) {
+      support = percept->info.object_support;
+    } else if (!percept->info.class_id.empty()) {
+      support = percept->info.class_support;
+    }
+
+    if (support == 0.0) {
+      ROS_WARN("Ignoring percept with support == 0.0");
+      return;
+    }
+
+    // lock model
+    model.lock();
+
+    // TODO Check if we need to test on best corresponding object ehre and if we do this what happens to older objects? !!!!!!!!
+    // find correspondence
+    ObjectPtr object;
+
+      object = model.add(percept->info.class_id, percept->info.object_id);
+
+      object->setPose(pose);
+      object->setCovariance(covariance);
+      object->setSupport(support);
+
+      ROS_INFO("Found new object %s of class %s at (%f,%f)!", object->getObjectId().c_str(), object->getClassId().c_str(), pose.getOrigin().getX(), pose.getOrigin().getY());
+
+
+      object->setState(ObjectState::ACTIVE);
+
+
+    // update object header
+    std_msgs::Header header;
+    header.stamp    = percept->header.stamp;
+    header.frame_id = _frame_id;
+    object->setHeader(header);
+
+    // update object name
+    if (!percept->info.name.empty()) object->setName(percept->info.name);
+
+    // unlock model
+    model.unlock();
+
+    // publish pose in target frame for debugging purposes
+    if (objectPoseDebugPublisher.getNumSubscribers() > 0) {
+      geometry_msgs::PoseStamped pose;
+      object->getPose(pose.pose);
+      pose.header = object->getHeader();
+      objectPoseDebugPublisher.publish(pose);
+    }
+
+    modelUpdatePublisher.publish(object->getMessage());
+    publishModel();
 }
 
 void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptConstPtr &percept)
