@@ -25,6 +25,7 @@ add_message_files(
   ObjectState.msg
   PerceptInfo.msg
   PosePercept.msg
+  UserPercept.msg
 )
 
 ## Generate services in the 'srv' folder

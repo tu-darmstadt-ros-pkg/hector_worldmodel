@@ -46,6 +46,7 @@ ObjectTracker::ObjectTracker()
   ros::NodeHandle worldmodel(_worldmodel_ns);
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
+  userPerceptSubscriber = worldmodel.subscribe("user_percept", 10, &ObjectTracker::userPerceptCb, this);
   objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
   modelPublisher = worldmodel.advertise<hector_worldmodel_msgs::ObjectModel>("objects", 10, false);
   modelUpdatePublisher = worldmodel.advertise<hector_worldmodel_msgs::Object>("object", 10, false);
@@ -218,6 +219,10 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
       (*it)->model.reset();
     }
   }
+}
+
+void userPerceptCb(const hector_worldmodel_msgs::UserPerceptConstPtr &){
+
 }
 
 void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptConstPtr &percept)
