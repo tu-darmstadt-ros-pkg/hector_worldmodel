@@ -174,7 +174,12 @@ void Object::intersect(const tf::Pose& poseB, const Eigen::Matrix3f& covarianceB
   double infB = 1./covarianceB.trace();
 
   covariance = (A + B).inverse();
-  position = covariance * (A * position + B * positionB);
+
+  //just update position if it is not fixed for the object
+  if (!parameter(_position_fixed, getClassId())){
+      position = covariance * (A * position + B * positionB);
+  }
+
   updateOrientation(orientationB, infB / (infA + infB));
 
   setPosition(position);

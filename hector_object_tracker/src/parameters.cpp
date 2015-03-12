@@ -57,6 +57,9 @@ std::map<std::string, ros::ServiceClientPtr> _get_normal_service;
 std::map<std::string, ServiceClientsWithProperties> _percept_verification_services;
 std::map<std::string, ServiceClientsWithProperties> _object_verification_services;
 
+//Used to keep position of objects fixed
+std::map<std::string, bool>   _position_fixed;
+
 namespace Parameters {
 
   void load(const std::string &class_id /* = std::string() */)
@@ -97,6 +100,10 @@ namespace Parameters {
       priv_nh.getParam(prefix + "inactive_time", _inactive_time[class_id]);
     if (priv_nh.hasParam(prefix + "min_distance_between_objects"))
       priv_nh.getParam(prefix + "min_distance_between_objects", _min_distance_between_objects[class_id]);
+
+    //Used to mark position of certain objects as fixed
+    if (priv_nh.hasParam(prefix + "position_fixed"))
+      priv_nh.getParam(prefix + "position_fixed", _position_fixed[class_id]);
 
     if (priv_nh.hasParam(prefix + "marker_color")) {
       XmlRpc::XmlRpcValue color;

@@ -37,6 +37,9 @@ ObjectTracker::ObjectTracker()
   parameter(_inactive_time)     = 0.0;
   parameter(_min_distance_between_objects) = 0.0;
 
+  //Used to keep position of certain objects fixed
+  parameter(_position_fixed)  = false;
+
   std_msgs::ColorRGBA default_color;
   default_color.r = 0.8; default_color.a = 1.0;
   parameter(_marker_color)      = default_color;

@@ -56,6 +56,9 @@ namespace hector_object_tracker {
   extern std::map<std::string, ros::ServiceClientPtr> _distance_to_obstacle_service;
   extern std::map<std::string, ros::ServiceClientPtr> _get_normal_service;
 
+  // Used to mark position of certain objects as fixed
+  extern std::map<std::string, bool> _position_fixed;
+
   typedef std::pair<ros::ServiceClientPtr, XmlRpc::XmlRpcValue> ServiceClientWithProperties;
   typedef std::vector<ServiceClientWithProperties> ServiceClientsWithProperties;
   extern std::map<std::string, ServiceClientsWithProperties> _percept_verification_services;
