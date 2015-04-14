@@ -50,8 +50,9 @@ ObjectTracker::ObjectTracker()
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
   userPerceptSubscriber = worldmodel.subscribe("user_percept", 10, &ObjectTracker::userPerceptCb, this);
+  dataPerceptSubscriber = worldmodel.subscribe("data_percept", 10, &ObjectTracker::dataPerceptCb, this);
   objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
-  modelPublisher = worldmodel.advertise<hector_worldmodel_msgs::ObjectModel>("objects", 10, false);
+  modelPublisher = worldmodel.advertise<hector_worldmodel_msgs::ObjectModel>("objects", 10, true);
   modelUpdatePublisher = worldmodel.advertise<hector_worldmodel_msgs::Object>("object", 10, false);
   modelUpdateSubscriber = worldmodel.subscribe<hector_worldmodel_msgs::ObjectModel>("update", 10, &ObjectTracker::modelUpdateCb, this);
 
@@ -222,6 +223,10 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
       (*it)->model.reset();
     }
   }
+}
+
+void ObjectTracker::dataPerceptCb(const hector_worldmodel_msgs::DataPerceptConstPtr &data_msg){
+    model.setData(data_msg->data,data_msg->data_index,data_msg->object_index);
 }
 
 void ObjectTracker::userPerceptCb(const hector_worldmodel_msgs::UserPerceptConstPtr &percept){
@@ -641,14 +646,12 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     object->setPose(pose);
     object->setCovariance(covariance);
     object->setSupport(support);
-
     ROS_INFO("Found new object %s of class %s at (%f,%f)!", object->getObjectId().c_str(), object->getClassId().c_str(), pose.getOrigin().getX(), pose.getOrigin().getY());
 
   // or update existing object
   } else if (support > 0.0) {
     //object->update(pose, covariance, support);
     object->intersect(pose, covariance, support);
-
   // or simply decrease support
   } else {
     object->addSupport(support);
@@ -671,7 +674,9 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   header.stamp    = percept->header.stamp;
   header.frame_id = _frame_id;
   object->setHeader(header);
-
+  if (percept->info.data.size() > 0){
+      object->setData(percept->info.data);
+  }
   // update object name
   if (!percept->info.name.empty()) object->setName(percept->info.name);
 

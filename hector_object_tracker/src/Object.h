@@ -12,6 +12,7 @@
 
 #include <map>
 
+#include <vector>
 namespace hector_object_tracker {
 
 class Object
@@ -55,6 +56,10 @@ public:
     void setCovariance(const Eigen::Matrix3f& covariance);
     void setCovariance(const tf::Matrix3x3& covariance);
     void setCovariance(const geometry_msgs::PoseWithCovariance::_covariance_type& covariance);
+
+    const std::vector<float>& getData() const;
+    void setData(const std::vector<float>& data);
+    void setData(const float& data,int index);
 
     const std::string& getClassId() const {
       return this->info.class_id;
@@ -128,6 +133,7 @@ private:
     Eigen::Vector3f position;
     Eigen::Quaternionf orientation;
     Eigen::Matrix3f covariance;
+    std::vector<float> data;
 
     static std::map<std::string,unsigned int> object_count;
     static std::string object_namespace;

@@ -62,6 +62,8 @@ public:
     void mergeWith(const ObjectModel& other, tf::TransformListener& tf, const std::string& prefix = std::string());
     void merge(const ObjectPtr& other, tf::TransformListener& tf, const std::string& prefix = std::string());
 
+    void setData(float data, int index, int object_index);
+
 private:
     std_msgs::Header header;
     ObjectList objects;

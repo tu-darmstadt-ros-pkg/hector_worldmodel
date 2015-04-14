@@ -156,6 +156,18 @@ void Object::setCovariance(const geometry_msgs::PoseWithCovariance::_covariance_
                       covariance[12], covariance[13], covariance[14];
 }
 
+const std::vector<float>& Object::getData() const{
+   return data;
+}
+
+void Object::setData(const std::vector<float>& data){
+    this->data = data;
+}
+
+void Object::setData(const float& data,int index){
+    this->data[index] = data;
+}
+
 void Object::setState(const StateType& state) {
   if (this->state.state == state) return;
   ROS_INFO("Setting object state for %s to %s", getObjectId().c_str(), hector_worldmodel_msgs::getObjectStateString(state));

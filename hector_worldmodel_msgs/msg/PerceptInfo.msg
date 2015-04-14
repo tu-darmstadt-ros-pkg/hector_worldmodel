@@ -17,3 +17,6 @@ float32 object_support
 
 # A string that contains the name or a description of the specific object
 string name
+
+# A float array that can contain additional data for the percept (e.g manometer values)
+float32[] data

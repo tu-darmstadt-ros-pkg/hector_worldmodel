@@ -31,6 +31,7 @@ protected:
   void imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptConstPtr &);
   void posePerceptCb(const hector_worldmodel_msgs::PosePerceptConstPtr &);
   void userPerceptCb(const hector_worldmodel_msgs::UserPerceptConstPtr &);
+  void dataPerceptCb(const hector_worldmodel_msgs::DataPerceptConstPtr &);
   void objectAgeingCb(const std_msgs::Float32ConstPtr &);
 
   void modelUpdateCb(const hector_worldmodel_msgs::ObjectModelConstPtr &);
@@ -59,6 +60,7 @@ private:
   ros::Subscriber imagePerceptSubscriber;
   ros::Subscriber posePerceptSubscriber;
   ros::Subscriber userPerceptSubscriber;
+  ros::Subscriber dataPerceptSubscriber;
   ros::Subscriber sysCommandSubscriber;
   ros::Subscriber objectAgeingSubscriber;
 

@@ -209,4 +209,15 @@ void ObjectModel::merge(const ObjectPtr& object, tf::TransformListener &tf, cons
   }
 }
 
+void ObjectModel::setData(float data, int index, int object_index){
+    int i=0;
+    for(ObjectList::iterator it = objects.begin(); it != objects.end(); ++it) {
+      if (i==object_index) {
+        ObjectPtr x = *it;
+        x->setData(data,index);
+
+      }
+    }
+}
+
 } // namespace hector_object_tracker
