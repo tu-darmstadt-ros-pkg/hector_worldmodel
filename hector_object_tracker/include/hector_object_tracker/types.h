@@ -31,7 +31,6 @@
 #include <hector_worldmodel_msgs/ImagePercept.h>
 #include <hector_worldmodel_msgs/PosePercept.h>
 #include <hector_worldmodel_msgs/UserPercept.h>
-#include <hector_worldmodel_msgs/DataPercept.h>
 #include <hector_worldmodel_msgs/constants/ObjectState.h>
 
 #include <boost/shared_ptr.hpp>
