@@ -50,7 +50,6 @@ ObjectTracker::ObjectTracker()
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
   userPerceptSubscriber = worldmodel.subscribe("user_percept", 10, &ObjectTracker::userPerceptCb, this);
-  dataPerceptSubscriber = worldmodel.subscribe("data_percept", 10, &ObjectTracker::dataPerceptCb, this);
   objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
   modelPublisher = worldmodel.advertise<hector_worldmodel_msgs::ObjectModel>("objects", 10, true);
   modelUpdatePublisher = worldmodel.advertise<hector_worldmodel_msgs::Object>("object", 10, false);
@@ -223,10 +222,6 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
       (*it)->model.reset();
     }
   }
-}
-
-void ObjectTracker::dataPerceptCb(const hector_worldmodel_msgs::DataPerceptConstPtr &data_msg){
-    model.setData(data_msg->data,data_msg->data_index,data_msg->object_index);
 }
 
 void ObjectTracker::userPerceptCb(const hector_worldmodel_msgs::UserPerceptConstPtr &percept){
