@@ -9,3 +9,6 @@ geometry_msgs/Pose pose
 
 # Additional information about the percept
 PerceptInfo info
+
+# A float array that can contain fixed properties (e.g as size,diameter)
+float32[] fixed_properties
