@@ -11,19 +11,28 @@
         dial_gauge:
           pending_support: 1.0
           active_support: 1.0
-          min_height: -0.4
-          max_height: 3.0
+          min_height: -10
+          max_height: 10
           marker_color: [0.8, 0.0, 0.0]
           with_orientation: true
           #get_normal_service: hector_octomap_server/get_normal
-          min_distance_between_objects: 1.0
+          position_fixed: true
         level_gauge:
           pending_support: 1.0
           active_support: 1.0
-          min_height: -0.4
-          max_height: 3.0
+          min_height: -10
+          max_height: 10.0
           with_orientation: true
           marker_color: [0.0, 0.0, 0.8]
+          position_fixed: true
+        valve:
+          pending_support: 1.0
+          active_support: 1.0
+          min_height: -10
+          max_height: 10
+          with_orientation: true
+          marker_color: [0.0, 0.8, 0.0]
+          position_fixed: true
         verification_services:
           allow_none: true
       </rosparam>

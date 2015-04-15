@@ -157,15 +157,16 @@ void Object::setCovariance(const geometry_msgs::PoseWithCovariance::_covariance_
 }
 
 const std::vector<float>& Object::getData() const{
-   return data;
+   return info.data;
+
 }
 
 void Object::setData(const std::vector<float>& data){
-    this->data = data;
+    this->info.data = data;
 }
 
 void Object::setData(const float& data,int index){
-    this->data[index] = data;
+    this->info.data[index] = data;
 }
 
 void Object::setState(const StateType& state) {

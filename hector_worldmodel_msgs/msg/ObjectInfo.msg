@@ -13,3 +13,6 @@ string name
 # The support (degree of belief) of the object's presence given as log odd ratio
 float32 support
 
+# A float array that can contain additional data for the percept (e.g manometer values)
+float32[] data
+

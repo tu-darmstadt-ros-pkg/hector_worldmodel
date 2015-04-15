@@ -133,7 +133,7 @@ private:
     Eigen::Vector3f position;
     Eigen::Quaternionf orientation;
     Eigen::Matrix3f covariance;
-    std::vector<float> data;
+    //std::vector<float> data;
 
     static std::map<std::string,unsigned int> object_count;
     static std::string object_namespace;

@@ -226,7 +226,6 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
 
 void ObjectTracker::userPerceptCb(const hector_worldmodel_msgs::UserPerceptConstPtr &percept){
 
-
     Parameters::load(percept->info.class_id);
 
     // publish pose in source frame for debugging purposes
@@ -317,7 +316,8 @@ void ObjectTracker::userPerceptCb(const hector_worldmodel_msgs::UserPerceptConst
 
     // update object name
     if (!percept->info.name.empty()) object->setName(percept->info.name);
-
+    // update object data
+    if (!percept->info.data.empty()) object->setData(percept->info.data);
     // unlock model
     model.unlock();
 
@@ -452,7 +452,6 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     pose.header = percept->header;
     perceptPoseDebugPublisher.publish(pose);
   }
-
   // call percept verification
   float support_added_by_percept_verification = 0.0;
   ServiceClientsWithProperties &percept_verification_services = parameter(_percept_verification_services, percept->info.class_id);
@@ -487,7 +486,6 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
       }
     }
   }
-
   // convert pose in tf
   tf::Pose pose;
   tf::poseMsgToTF(percept->pose.pose, pose);
@@ -629,7 +627,7 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   }
 
   if (object && object->getState() < 0) {
-    ROS_DEBUG("Percept was associated to object %s, which has a fixed state", object->getObjectId().c_str());
+    ROS_INFO("Percept was associated to object %s, which has a fixed state", object->getObjectId().c_str());
     model.unlock();
     return;
   }
@@ -641,6 +639,7 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     object->setPose(pose);
     object->setCovariance(covariance);
     object->setSupport(support);
+
     ROS_INFO("Found new object %s of class %s at (%f,%f)!", object->getObjectId().c_str(), object->getClassId().c_str(), pose.getOrigin().getX(), pose.getOrigin().getY());
 
   // or update existing object
@@ -672,6 +671,7 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   if (percept->info.data.size() > 0){
       object->setData(percept->info.data);
   }
+  ROS_WARN("after setting data");
   // update object name
   if (!percept->info.name.empty()) object->setName(percept->info.name);
 
