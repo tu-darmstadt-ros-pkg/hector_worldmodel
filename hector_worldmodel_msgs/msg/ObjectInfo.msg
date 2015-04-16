@@ -16,5 +16,3 @@ float32 support
 # A float array that can contain additional data for the percept (e.g manometer values)
 float32[] data
 
-# A float array that can contain fixed properties (e.g as size,diameter)
-float32[] fixed_properties
