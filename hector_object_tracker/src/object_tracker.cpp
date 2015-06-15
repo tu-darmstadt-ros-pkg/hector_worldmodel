@@ -671,7 +671,6 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   if (percept->info.data.size() > 0){
       object->setData(percept->info.data);
   }
-  ROS_WARN("after setting data");
   // update object name
   if (!percept->info.name.empty()) object->setName(percept->info.name);
 
