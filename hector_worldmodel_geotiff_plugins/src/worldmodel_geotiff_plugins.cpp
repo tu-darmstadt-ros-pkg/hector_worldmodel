@@ -87,6 +87,9 @@ void MapWriterPlugin::initialize(const std::string& name)
   ROS_INFO_NAMED(name_, "Successfully initialized hector_geotiff MapWriter plugin %s.", name_.c_str());
 }
 
+
+
+
 class VictimMapWriter : public MapWriterPlugin
 {
 public:
@@ -138,9 +141,16 @@ public:
       interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(++counter), MapWriterInterface::Color(240,10,10));
 
       if (description_file.is_open()) {
-        boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
-        boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
-        description_file << counter << "," << time << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
+
+          std::string tele ("teleop");
+          std::size_t found = object.info.object_id.find(tele);
+          std::string name_and_state = object.info.object_id + "_a";
+          if (found < object.info.object_id.size()){
+              name_and_state = object.info.object_id + "_t";
+          }
+          boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
+          boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
+          description_file << counter << "," << time << "," << name_and_state << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
       }
     }
   }
@@ -254,7 +264,14 @@ public:
       if (description_file.is_open()) {
         boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
         boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
-        description_file << counter << "," << time << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
+        std::string tele ("teleop");
+        std::size_t found = object.info.object_id.find(tele);
+        std::string name_and_state = object.info.name + "_a";
+        if (found < object.info.object_id.size()){
+            name_and_state = object.info.name + "_t";
+        }
+
+        description_file << counter << "," << time << "," << name_and_state << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
       }
     }
 
