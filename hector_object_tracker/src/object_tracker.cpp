@@ -43,10 +43,14 @@ ObjectTracker::ObjectTracker()
 
   Parameters::load();
 
+  // Initialize the system state in order to name objects correctly (e.g autonomy vs teleop)
+  _system_state = "_default";
+
   ros::NodeHandle worldmodel(_worldmodel_ns);
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
   objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
+  systemStateSubscriber = worldmodel.subscribe("system_state", 10, &ObjectTracker::systemStateCb, this);
   modelPublisher = worldmodel.advertise<hector_worldmodel_msgs::ObjectModel>("objects", 10, false);
   modelUpdatePublisher = worldmodel.advertise<hector_worldmodel_msgs::Object>("object", 10, false);
   modelUpdateSubscriber = worldmodel.subscribe<hector_worldmodel_msgs::ObjectModel>("update", 10, &ObjectTracker::modelUpdateCb, this);
@@ -329,7 +333,6 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
 
 void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConstPtr &percept)
 {
-
   Parameters::load(percept->info.class_id);
 
   // publish pose in source frame for debugging purposes
@@ -523,11 +526,16 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
 
   // create new object
   if (!object) {
+
     object = model.add(percept->info.class_id, percept->info.object_id);
 
     object->setPose(pose);
     object->setCovariance(covariance);
     object->setSupport(support);
+
+    // addapt object_id according o the system state in which the object was found
+    std::string id_string = object->getObjectId() + _system_state;
+    object->setObjectId(id_string);
 
     ROS_INFO("Found new object %s of class %s at (%f,%f)!", object->getObjectId().c_str(), object->getClassId().c_str(), pose.getOrigin().getX(), pose.getOrigin().getY());
 
@@ -653,6 +661,10 @@ void ObjectTracker::objectAgeingCb(const std_msgs::Float32ConstPtr &ageing) {
   // unlock model
   model.unlock();
   publishModel();
+}
+
+void ObjectTracker::systemStateCb(const std_msgs::String &state) {
+    _system_state = state.data;
 }
 
 void ObjectTracker::modelUpdateCb(const hector_worldmodel_msgs::ObjectModelConstPtr &update)
