@@ -31,7 +31,7 @@ protected:
   void imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptConstPtr &);
   void posePerceptCb(const hector_worldmodel_msgs::PosePerceptConstPtr &);
   void objectAgeingCb(const std_msgs::Float32ConstPtr &);
-  void systemStateCb(const std_msgs::String &state);
+  void autonomyLevelCb(const std_msgs::String &state);
 
   void modelUpdateCb(const hector_worldmodel_msgs::ObjectModelConstPtr &);
 
@@ -60,7 +60,7 @@ private:
   ros::Subscriber posePerceptSubscriber;
   ros::Subscriber sysCommandSubscriber;
   ros::Subscriber objectAgeingSubscriber;
-  ros::Subscriber systemStateSubscriber;
+  ros::Subscriber autonomyLevelSubscriber;
 
   struct NegativeUpdateInfo {
     std::string class_id;
@@ -109,7 +109,7 @@ private:
 
   std::string _frame_id;
   std::string _worldmodel_ns;
-  std::string _system_state;
+  std::string _autonomy_level;
 
   double _ageing_threshold;
   double _publish_interval;
