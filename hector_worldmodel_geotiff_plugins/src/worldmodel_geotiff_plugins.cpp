@@ -142,15 +142,15 @@ public:
 
       if (description_file.is_open()) {
 
-          std::string tele ("teleop");
-          std::size_t found = object.info.object_id.find(tele);
-          std::string name_and_state = object.info.object_id + "_a";
-          if (found < object.info.object_id.size()){
-              name_and_state = object.info.object_id + "_t";
-          }
+//          std::string tele ("teleop");
+//          std::size_t found = object.info.object_id.find(tele);
+//          std::string name_and_state = object.info.object_id + "_a";
+//          if (found < object.info.object_id.size()){
+//              name_and_state = object.info.object_id + "_t";
+//          }
           boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
           boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
-          description_file << counter << "," << time << "," << name_and_state << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
+          description_file << counter << "," << time << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
       }
     }
   }
@@ -192,7 +192,7 @@ public:
       description_file << "\"" << now_time << "\"" << std::endl;
       if (!mission_name.empty()) description_file << "\"" << mission_name << "\"" << std::endl;
       description_file << std::endl;
-      description_file << "id,time,text,x,y,z" << std::endl;
+      description_file << "id,time,text,x,y,z,robot,mode" << std::endl;
     }
 
 //    hector_worldmodel_msgs::Object test_obj;
@@ -266,12 +266,14 @@ public:
         boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
         std::string tele ("teleop");
         std::size_t found = object.info.object_id.find(tele);
-        std::string name_and_state = object.info.name + "_a";
+        std::string robot_state = "A";
         if (found < object.info.object_id.size()){
-            name_and_state = object.info.name + "_t";
+            robot_state = object.info.name + "T";
         }
 
-        description_file << counter << "," << time << "," << name_and_state << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
+        std::string robot_name = "Hector";
+
+        description_file << counter << "," << time << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << "," << robot_name << "," << robot_state  << std::endl;
       }
     }
 
