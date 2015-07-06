@@ -44,13 +44,13 @@ ObjectTracker::ObjectTracker()
   Parameters::load();
 
   // Initialize the system state in order to name objects correctly (e.g autonomy vs teleop)
-  _autonomy_level = "_default";
+  _autonomy_level = "default";
 
   ros::NodeHandle worldmodel(_worldmodel_ns);
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
   objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
-  autonomyLevelSubscriber = worldmodel.subscribe("autonomy_level", 10, &ObjectTracker::autonomyLevelCb, this);
+  autonomyLevelSubscriber = worldmodel.subscribe("/autonomy_level", 10, &ObjectTracker::autonomyLevelCb, this);
   modelPublisher = worldmodel.advertise<hector_worldmodel_msgs::ObjectModel>("objects", 10, false);
   modelUpdatePublisher = worldmodel.advertise<hector_worldmodel_msgs::Object>("object", 10, false);
   modelUpdateSubscriber = worldmodel.subscribe<hector_worldmodel_msgs::ObjectModel>("update", 10, &ObjectTracker::modelUpdateCb, this);
@@ -534,7 +534,7 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
     object->setSupport(support);
 
     // addapt object_id according o the system state in which the object was found
-    std::string id_string = object->getObjectId() + _autonomy_level;
+    std::string id_string = object->getObjectId() + "_"+_autonomy_level;
     object->setObjectId(id_string);
 
     ROS_INFO("Found new object %s of class %s at (%f,%f)!", object->getObjectId().c_str(), object->getClassId().c_str(), pose.getOrigin().getX(), pose.getOrigin().getY());
