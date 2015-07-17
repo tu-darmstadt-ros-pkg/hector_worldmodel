@@ -62,6 +62,7 @@ protected:
   std::string name_;
   bool draw_all_objects_;
   std::string class_id_;
+  std::string robot_name_;
 };
 
 MapWriterPlugin::MapWriterPlugin()
@@ -79,6 +80,7 @@ void MapWriterPlugin::initialize(const std::string& name)
   plugin_nh.param("service_name", service_name_, std::string("worldmodel/get_object_model"));
   plugin_nh.param("draw_all_objects", draw_all_objects_, false);
   plugin_nh.param("class_id", class_id_, std::string());
+  plugin_nh.param("robot_default_name", robot_name_, std::string("Hector"));
 
   service_client_ = nh_.serviceClient<hector_worldmodel_msgs::GetObjectModel>(service_name_);
 
@@ -126,7 +128,7 @@ public:
       description_file << "\"" << now_time << "\"" << std::endl;
       if (!mission_name.empty()) description_file << "\"" << mission_name << "\"" << std::endl;
       description_file << std::endl;
-      description_file << "id,time,name,x,y,z" << std::endl;
+      description_file << "id,time,name,x,y,z,robot,mode" << std::endl;
     }
 
     int counter = 0;
@@ -150,7 +152,23 @@ public:
 //          }
           boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
           boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
-          description_file << counter << "," << time << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
+
+          std::string tele ("teleop");
+          std::size_t found_state = object.info.object_id.find(tele);
+          std::string robot_state = "A";
+          if (found_state < object.info.object_id.size()){
+              robot_state = object.info.name + "T";
+          }
+
+          std::string name ("hector2");
+          std::size_t found_robot_name = object.info.object_id.find(name);
+          if (found_robot_name < object.info.object_id.size()){
+              robot_name_ = "Bertel";
+          }
+
+          std::cout<<found_robot_name<< "========================="<<std::endl;
+
+          description_file << counter << "," << time << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << "," << robot_name_ << "," << robot_state << std::endl;
       }
     }
   }
@@ -271,9 +289,7 @@ public:
             robot_state = object.info.name + "T";
         }
 
-        std::string robot_name = "Hector";
-
-        description_file << counter << "," << time << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << "," << robot_name << "," << robot_state  << std::endl;
+        description_file << counter << "," << time << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << "," << robot_name_ << "," << robot_state  << std::endl;
       }
     }
 
