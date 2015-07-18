@@ -276,7 +276,9 @@ public:
                 Eigen::Vector2f coords;
                 coords.x() = object.pose.pose.position.x;
                 coords.y() = object.pose.pose.position.y;
-                interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(10,10,240));
+                if(object.info.class_id != "barrel"){
+                    interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(10,10,240));
+                }
             }
 
             if (description_file.is_open()) {
