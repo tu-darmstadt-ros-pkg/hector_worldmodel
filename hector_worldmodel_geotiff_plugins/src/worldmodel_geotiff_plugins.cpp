@@ -157,7 +157,7 @@ public:
                 std::size_t found_state = object.info.object_id.find(tele);
                 std::string robot_state = "A";
                 if (found_state < object.info.object_id.size()){
-                    robot_state = object.info.name + "T";
+                    robot_state = "T";
                 }
 
                 std::string name ("hector2");
@@ -165,8 +165,6 @@ public:
                 if (found_robot_name < object.info.object_id.size()){
                     robot_name_ = "Bertel";
                 }
-
-                std::cout<<found_robot_name<< "========================="<<std::endl;
 
                 description_file << counter << "," << time << "," << object.info.object_id << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << "," << robot_name_ << "," << robot_state << std::endl;
             }
@@ -288,7 +286,7 @@ public:
                 std::size_t found = object.info.object_id.find(tele);
                 std::string robot_state = "A";
                 if (found < object.info.object_id.size()){
-                    robot_state = object.info.name + "T";
+                    robot_state = "T";
                 }
 
                 if(object.info.class_id != "barrel"){
