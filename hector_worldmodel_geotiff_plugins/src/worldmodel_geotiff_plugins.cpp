@@ -160,6 +160,7 @@ public:
                     robot_state = "T";
                 }
 
+                robot_name_ = "Hector";
                 std::string name ("hector2");
                 std::size_t found_robot_name = object.info.object_id.find(name);
                 if (found_robot_name < object.info.object_id.size()){
@@ -289,6 +290,7 @@ public:
                     robot_state = "T";
                 }
 
+                robot_name_ = "Hector";
                 std::string name ("hector2");
                 std::size_t found_robot_name = object.info.object_id.find(name);
                 if (found_robot_name < object.info.object_id.size()){
