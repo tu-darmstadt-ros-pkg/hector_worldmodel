@@ -203,7 +203,7 @@ public:
         std::ofstream description_file((interface->getBasePathAndFileName() + "_qr.csv").c_str());
         if (description_file.is_open()) {
             description_file << "\"qr codes\"" << std::endl;
-            description_file << "\"1.0\"" << std::endl;
+            description_file << "\"1.1\"" << std::endl;
             if (!team_name.empty()) description_file << "\"" << team_name << "\"" << std::endl;
             if (!country.empty()) description_file << "\"" << country << "\"" << std::endl;
             description_file << "\"" << now_date << "\"" << std::endl;
