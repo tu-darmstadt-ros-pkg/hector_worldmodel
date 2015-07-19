@@ -289,6 +289,12 @@ public:
                     robot_state = "T";
                 }
 
+                std::string name ("hector2");
+                std::size_t found_robot_name = object.info.object_id.find(name);
+                if (found_robot_name < object.info.object_id.size()){
+                    robot_name_ = "Bertel";
+                }
+
                 if(object.info.class_id != "barrel"){
                     description_file << counter << "," << time << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << "," << robot_name_ << "," << robot_state  << std::endl;
                 }else{
