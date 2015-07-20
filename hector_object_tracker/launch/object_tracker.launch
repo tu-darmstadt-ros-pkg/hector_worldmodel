@@ -22,6 +22,9 @@
         barrel:
           active_support: 5.0
           marker_color: [0.8, 0.8, 0.0]
+        veil:
+          active_support: 5.0
+          marker_color: [0.8, 0.8, 0.0]
         verification_services:
           - service: victim_verification/verify_victim
             type: object
