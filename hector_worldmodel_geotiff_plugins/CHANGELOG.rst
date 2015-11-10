@@ -2,6 +2,9 @@
 Changelog for package hector_worldmodel_geotiff_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.3.3 (2015-11-10)
+------------------
+
 0.3.2 (2014-09-06)
 ------------------
 * write victims to file

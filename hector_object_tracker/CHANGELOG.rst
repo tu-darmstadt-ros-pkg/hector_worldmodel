@@ -2,6 +2,18 @@
 Changelog for package hector_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.3.3 (2015-11-10)
+------------------
+* added barrels to launch file
+* changed max height to 0.2
+* Reduce max height
+* changed min height for target
+* -Update sick robot day 2014 params
+* -Rename launch file
+* -Change settings for SRD2014
+* launch file for turtlebot added
+* Contributors: Christian Rose, Dorothea Koert, Stefan Kohlbrecher
+
 0.3.2 (2014-09-06)
 ------------------
 * generalized min_distance_between_objects check for confirmed objects
