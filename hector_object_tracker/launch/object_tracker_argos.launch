@@ -49,6 +49,24 @@
           with_orientation: true
           marker_color: [0.0, 0.8, 0.8]
           position_fixed: true
+        heat_source:
+          pending_support: 1.0
+          active_support: 10.0
+          min_height: -1.5
+          max_height: 1.5
+          marker_color: [0.8, 0.4, 0.0]
+          with_orientation: true
+          #get_normal_service: hector_octomap_server/get_normal
+          min_distance_between_objects: 0.3
+        obstacle:
+          pending_support: 1.0
+          active_support: 10.0
+          min_height: -1.5
+          max_height: 1.5
+          marker_color: [0.2, 0.2, 0.3]
+          with_orientation: true
+          #get_normal_service: hector_octomap_server/get_normal
+          min_distance_between_objects: 0.3
         victim:
           pending_support: 1.0
           active_support: 10.0
