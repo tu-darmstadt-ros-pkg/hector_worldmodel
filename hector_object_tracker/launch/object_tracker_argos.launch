@@ -1,81 +1,92 @@
 <?xml version="1.0"?>
 
 <launch>
+
+    <arg name="default_checkpoint" value="
+        pending_support: 1.0,
+        active_support: 1.0,
+        min_height: -10,
+        max_height: 10,
+        with_orientation: true,
+    " />
+    <arg name="default_object_dynamic" value="
+        pending_support: 1.0,
+        active_support: 10.0,
+        min_height: -1.5,
+        max_height: 10.0,
+        with_orientation: false,
+        min_distance_between_objects: 0.3,
+    " />
+
     <node pkg="hector_object_tracker" type="object_tracker" name="object_tracker" output="screen">
       <param name="project_objects" type="bool" value="true" />
       <param name="angle_variance" type="double" value="0.121846968"/>
       <param name="publish_interval" type="double" value="1.0" />
       <param name="frame_id" value="world" />
 
-      <rosparam>
-        dial_gauge:
-          pending_support: 1.0
-          active_support: 1.0
-          min_height: -10
-          max_height: 10
+      <rosparam subst_value="True">
+
+        # known checkpoints
+        dial_gauge: {
+          $(arg default_checkpoint)
+          position_fixed: true,
           marker_color: [0.8, 0.0, 0.0]
-          with_orientation: true
-          #get_normal_service: hector_octomap_server/get_normal
-          position_fixed: true
-        level_gauge:
-          pending_support: 1.0
-          active_support: 1.0
-          min_height: -10
-          max_height: 10.0
-          with_orientation: true
+        }
+        level_gauge: {
+          $(arg default_checkpoint)
+          position_fixed: true,
           marker_color: [0.0, 0.0, 0.8]
-          position_fixed: true
-        valve:
-          pending_support: 1.0
-          active_support: 1.0
-          min_height: -10
-          max_height: 10
-          with_orientation: true
+        }
+        valve: {
+          $(arg default_checkpoint)
+          position_fixed: true,
           marker_color: [0.0, 0.8, 0.0]
-          position_fixed: true
-        hotspot:
-          pending_support: 1.0
-          active_support: 1.0
-          min_height: -10
-          max_height: 10
-          with_orientation: true
+        }
+        hotspot: {
+          $(arg default_checkpoint)
+          position_fixed: true,
           marker_color: [0.8, 0.8, 0.0]
-          position_fixed: true
-        object_of_interest:
-          pending_support: 1.0
-          active_support: 1.0
-          min_height: -10
-          max_height: 10
-          with_orientation: true
+        }
+
+        # detected checkpoints (update position and orientation offset)
+        dial_gauge_detected: {
+          $(arg default_checkpoint)
+          marker_color: [1.0, 0.0, 0.0]
+        }
+        level_gauge_detected: {
+          $(arg default_checkpoint)
+          marker_color: [0.0, 0.0, 1.0]
+        }
+        valve_detected: {
+          $(arg default_checkpoint)
+          marker_color: [0.0, 1.0, 0.0]
+        }
+        hotspot_detected: {
+          $(arg default_checkpoint)
+          marker_color: [1.0, 1.0, 0.0]
+        }
+
+        # further known objects
+        object_of_interest: {
+          $(arg default_checkpoint)
+          position_fixed: true,
           marker_color: [0.0, 0.8, 0.8]
-          position_fixed: true
-        heat_source:
-          pending_support: 1.0
-          active_support: 10.0
-          min_height: -1.5
-          max_height: 1.5
+        }
+
+        # dynamically detected objects
+        heat_source: {
+          $(arg default_object_dynamic)
           marker_color: [0.8, 0.4, 0.0]
-          with_orientation: true
-          #get_normal_service: hector_octomap_server/get_normal
-          min_distance_between_objects: 0.3
-        obstacle:
-          pending_support: 1.0
-          active_support: 10.0
-          min_height: -1.5
-          max_height: 1.5
+        }
+        obstacle: {
+          $(arg default_object_dynamic)
           marker_color: [0.2, 0.2, 0.3]
-          with_orientation: true
-          #get_normal_service: hector_octomap_server/get_normal
-          min_distance_between_objects: 0.3
-        victim:
-          pending_support: 1.0
-          active_support: 10.0
-          min_height: -1.5
-          max_height: 1.5
-          marker_color: [0.8, 0.0, 0.0]
-          with_orientation: true
-          #get_normal_service: hector_octomap_server/get_normal
-          min_distance_between_objects: 0.3
+        }
+        leak: {
+          $(arg default_object_dynamic)
+          marker_color: [0.8, 0.8, 0.9]
+        }
+
         verification_services:
           allow_none: true
       </rosparam>
