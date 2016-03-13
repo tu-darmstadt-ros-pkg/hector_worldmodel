@@ -1,5 +1,8 @@
-#ifndef OBJECT_MODEL_H
-#define OBJECT_MODEL_H
+#ifndef OBJECT_MODEL_UTIL_H
+#define OBJECT_MODEL_UTIL_H
+
+namespace hector_worldmodel_msgs
+{
 
 hector_worldmodel_msgs::Object* getObjectByID(hector_worldmodel_msgs::ObjectModel &object_model, std::string object_id){
 
@@ -13,6 +16,8 @@ hector_worldmodel_msgs::Object* getObjectByID(hector_worldmodel_msgs::ObjectMode
         }
     }
     return NULL;
+}
+
 }
 
 #endif
