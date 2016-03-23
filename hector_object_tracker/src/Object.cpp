@@ -271,10 +271,10 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   marker.ns = this->info.class_id;
 
   marker.type = visualization_msgs::Marker::ARROW;
-  marker.scale.x = 1.0;
-  marker.scale.y = 1.0;
-  marker.scale.z = 1.0;
-  // markers.markers.push_back(marker);
+  marker.scale.x = 0.075;
+  marker.scale.y = 0.025;
+  marker.scale.z = 0.025;
+  markers.markers.push_back(marker);
 
   marker.type = visualization_msgs::Marker::SPHERE;
   marker.scale.x = 0.1;
