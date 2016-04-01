@@ -88,11 +88,19 @@
         }
 
         verification_services:
-          allow_none: true
+          #allow_none: true
+          - service: object_verification/hotspot_filter
+            type: percept
+            class_id: heat_source
+            required: true
       </rosparam>
 mo
       <remap from="get_distance_to_obstacle" to="/move_group/get_distance_to_obstacle" />
       <remap from="visualization_marker" to="worldmodel/visualization_marker" />
       <remap from="visualization_marker_array" to="worldmodel/visualization_marker_array" />
     </node>
+
+    <!-- Verification Services -->
+    <node pkg="argo_vision_worldmodel_interface" type="hotspot_filter.py" name="hotspot_filter" output="screen" />
+
 </launch>
