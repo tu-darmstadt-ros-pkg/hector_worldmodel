@@ -9,8 +9,8 @@ hector_worldmodel_msgs::Object* getObjectByID(hector_worldmodel_msgs::ObjectMode
     // [object_id - 1] seems brittle
     for(std::vector<hector_worldmodel_msgs::Object>::iterator it = object_model.objects.begin(); it != object_model.objects.end(); ++it) {
         /* std::cout << *it; ... */
-        std::string object_name = it->info.name;
-        if (object_name.find(object_id) != std::string::npos) {
+        std::string object_name = it->info.object_id;
+        if (object_name == object_id) {
             ROS_INFO("Object selected for id %s: %s", object_id.c_str(), object_name.c_str());
             return &(*it);
         }
