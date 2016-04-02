@@ -11,6 +11,7 @@
 #include <hector_worldmodel_msgs/AddObject.h>
 #include <hector_worldmodel_msgs/GetObjectModel.h>
 #include <sensor_msgs/CameraInfo.h>
+#include <std_srvs/Empty.h>
 
 #include <tf/transform_listener.h>
 #include <image_geometry/pinhole_camera_model.h>
@@ -62,6 +63,7 @@ private:
   ros::Subscriber dataPerceptSubscriber;
   ros::Subscriber sysCommandSubscriber;
   ros::Subscriber objectAgeingSubscriber;
+  ros::ServiceClient resest_worldmode_import_client;
 
   struct NegativeUpdateInfo {
     std::string class_id;

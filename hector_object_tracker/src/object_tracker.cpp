@@ -49,7 +49,7 @@ ObjectTracker::ObjectTracker()
   ros::NodeHandle worldmodel(_worldmodel_ns);
   imagePerceptSubscriber = worldmodel.subscribe("image_percept", 10, &ObjectTracker::imagePerceptCb, this);
   posePerceptSubscriber = worldmodel.subscribe("pose_percept", 10, &ObjectTracker::posePerceptCb, this);
-  userPerceptSubscriber = worldmodel.subscribe("user_percept", 10, &ObjectTracker::userPerceptCb, this);
+  userPerceptSubscriber = worldmodel.subscribe("user_percept", 100, &ObjectTracker::userPerceptCb, this);
   objectAgeingSubscriber = worldmodel.subscribe("object_ageing", 10, &ObjectTracker::objectAgeingCb, this);
   modelPublisher = worldmodel.advertise<hector_worldmodel_msgs::ObjectModel>("objects", 10, true);
   modelUpdatePublisher = worldmodel.advertise<hector_worldmodel_msgs::Object>("object", 10, false);
@@ -61,6 +61,7 @@ ObjectTracker::ObjectTracker()
   sysCommandSubscriber = nh.subscribe("/syscommand", 10, &ObjectTracker::sysCommandCb, this);
   perceptPoseDebugPublisher = priv_nh.advertise<geometry_msgs::PoseStamped>("percept/pose", 10, false);
   objectPoseDebugPublisher  = priv_nh.advertise<geometry_msgs::PoseStamped>("object/pose", 10, false);
+  resest_worldmode_import_client = nh.serviceClient<std_srvs::Empty>("worldmodel/reset_worldmodel");
 
   XmlRpc::XmlRpcValue verification_services;
   if (priv_nh.getParam("verification_services", verification_services) && verification_services.getType() == XmlRpc::XmlRpcValue::TypeArray) {
@@ -220,6 +221,12 @@ void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
     drawings.reset();
     for(std::vector<MergedModelPtr>::const_iterator it =  merged_models.begin(); it != merged_models.end(); ++it) {
       (*it)->model.reset();
+    }
+    //reload checkpoints
+    std_srvs::Empty empty_srv;
+    if (!resest_worldmode_import_client.call(empty_srv))
+    {
+      ROS_ERROR("Failed to call service worldmodel/reset_worldmodel. Checkpoints not reloaded.");
     }
   }
 }
