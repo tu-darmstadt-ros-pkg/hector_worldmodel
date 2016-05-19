@@ -35,7 +35,8 @@
             max_distance: 1.6
             negative_support: 0.5
       </rosparam>
-
+      
+      <remap from="get_distance_to_obstacle" to="/move_group/get_distance_to_obstacle" />
       <remap from="visualization_marker" to="worldmodel/visualization_marker" />
       <remap from="visualization_marker_array" to="worldmodel/visualization_marker_array" />
     </node>
