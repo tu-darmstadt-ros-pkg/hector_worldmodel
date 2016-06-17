@@ -19,6 +19,9 @@
         qrcode:
           active_support: 1.0
           marker_color: [0.0, 0.0, 0.8]
+        hazmat:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
         verification_services:
           - service: victim_verification/verify_victim
             type: object
@@ -35,10 +38,9 @@
             max_distance: 1.6
             negative_support: 0.5
       </rosparam>
-      
+
       <remap from="get_distance_to_obstacle" to="/move_group/get_distance_to_obstacle" />
       <remap from="visualization_marker" to="worldmodel/visualization_marker" />
       <remap from="visualization_marker_array" to="worldmodel/visualization_marker_array" />
     </node>
 </launch>
-
