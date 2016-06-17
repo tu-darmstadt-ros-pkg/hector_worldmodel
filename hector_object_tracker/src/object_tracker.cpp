@@ -634,7 +634,7 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   }
 
   if (object && object->getState() < 0) {
-    ROS_INFO("Percept was associated to object %s, which has a fixed state", object->getObjectId().c_str());
+    ROS_DEBUG("Percept was associated to object %s, which has a fixed state", object->getObjectId().c_str());
     model.unlock();
     return;
   }
