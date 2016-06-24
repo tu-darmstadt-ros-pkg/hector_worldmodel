@@ -1,6 +1,6 @@
 <package>
   <name>hector_worldmodel</name>
-  <version>0.3.3</version>
+  <version>0.3.4</version>
   <description>
     The hector_worldmodel stack helps to collect and fuse information about objects in the world.
     It is used by Team Hector Darmstadt to localize victims and QR codes in the Robocup Rescue

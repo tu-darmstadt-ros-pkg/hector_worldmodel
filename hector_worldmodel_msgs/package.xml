@@ -1,6 +1,6 @@
 <package>
   <name>hector_worldmodel_msgs</name>
-  <version>0.3.3</version>
+  <version>0.3.4</version>
   <description>
      hector_worldmodel_msgs is a message package to comes with the hector_worldmodel stack.
      The messages can be used to send percepts from images (hector_worldmodel_msgs/ImagePercept) or other sources

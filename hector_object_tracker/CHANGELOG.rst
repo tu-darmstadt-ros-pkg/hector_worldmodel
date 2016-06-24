@@ -2,6 +2,11 @@
 Changelog for package hector_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.3.4 (2016-06-24)
+------------------
+* Use the FindEigen3.cmake module provided by Eigen
+* Contributors: Johannes Meyer
+
 0.3.3 (2015-11-10)
 ------------------
 * added barrels to launch file
