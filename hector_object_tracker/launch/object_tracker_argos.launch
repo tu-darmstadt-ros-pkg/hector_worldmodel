@@ -88,13 +88,11 @@
           active_support: 10.0,
           marker_color: [0.8, 0.8, 0.9]
         }
-
         verification_services:
-          #allow_none: true
-          - service: object_verification/hotspot_filter
+          - service: thermal_self_filter/verify_percept
             type: percept
             class_id: heat_source
-            required: true
+            required: true   
       </rosparam>
 mo
       <remap from="get_distance_to_obstacle" to="/move_group/get_distance_to_obstacle" />
