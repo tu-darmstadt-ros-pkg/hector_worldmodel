@@ -92,7 +92,11 @@
           - service: thermal_self_filter/verify_percept
             type: percept
             class_id: heat_source
-            required: true   
+            required: true
+          - service: object_verification/hotspot_filter
+            type: percept
+            class_id: heat_source
+            required: true
       </rosparam>
 mo
       <remap from="get_distance_to_obstacle" to="/move_group/get_distance_to_obstacle" />
