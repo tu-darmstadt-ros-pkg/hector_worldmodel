@@ -83,10 +83,12 @@
           active_support: 2.0,
           marker_color: [0.2, 0.2, 0.2]
         }
-        leak: {
+        gas_leak: {
           $(arg default_object_dynamic)
           active_support: 10.0,
-          marker_color: [0.8, 0.8, 0.9]
+          position_fixed: false,
+          max_correspondence_distance: 3.0,
+          marker_color:[0.5, 1.0, 0.8]
         }
         verification_services:
           - service: thermal_self_filter/verify_percept

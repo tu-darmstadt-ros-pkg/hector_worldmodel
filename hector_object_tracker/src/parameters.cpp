@@ -51,6 +51,7 @@ std::map<std::string, double> _active_time;
 std::map<std::string, double> _inactive_support;
 std::map<std::string, double> _inactive_time;
 std::map<std::string, double> _min_distance_between_objects;
+std::map<std::string, double> _max_correspondence_distance;
 std::map<std::string, std_msgs::ColorRGBA> _marker_color;
 std::map<std::string, ros::ServiceClientPtr> _distance_to_obstacle_service;
 std::map<std::string, ros::ServiceClientPtr> _get_normal_service;
@@ -100,6 +101,8 @@ namespace Parameters {
       priv_nh.getParam(prefix + "inactive_time", _inactive_time[class_id]);
     if (priv_nh.hasParam(prefix + "min_distance_between_objects"))
       priv_nh.getParam(prefix + "min_distance_between_objects", _min_distance_between_objects[class_id]);
+    if (priv_nh.hasParam(prefix + "max_correspondence_distance"))
+      priv_nh.getParam(prefix + "max_correspondence_distance", _max_correspondence_distance[class_id]);
 
     //Used to mark position of certain objects as fixed
     if (priv_nh.hasParam(prefix + "position_fixed"))

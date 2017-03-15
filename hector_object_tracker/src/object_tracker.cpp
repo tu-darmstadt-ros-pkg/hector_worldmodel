@@ -36,6 +36,7 @@ ObjectTracker::ObjectTracker()
   parameter(_inactive_support)  = 0.0;
   parameter(_inactive_time)     = 0.0;
   parameter(_min_distance_between_objects) = 0.0;
+  parameter(_max_correspondence_distance) = 1.0;
 
   //Used to keep position of certain objects fixed
   parameter(_position_fixed)  = false;
@@ -628,7 +629,7 @@ void ObjectTracker::posePerceptCb(const hector_worldmodel_msgs::PosePerceptConst
   // find correspondence
   ObjectPtr object;
   if (percept->info.object_id.empty()) {
-    model.getBestCorrespondence(object, pose, covariance, percept->info.class_id, percept->info.name, 1.0f);
+    model.getBestCorrespondence(object, pose, covariance, percept->info.class_id, percept->info.name, parameter(_max_correspondence_distance, percept->info.class_id));
   } else {
     object = model.getObject(percept->info.object_id);
   }
