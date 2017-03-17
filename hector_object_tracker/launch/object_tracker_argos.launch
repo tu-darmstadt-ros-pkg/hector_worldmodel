@@ -76,7 +76,7 @@
         heat_source: {
           $(arg default_object_dynamic)
           active_support: 10.0,
-          max_correspondence_distance: 1.25,
+          max_correspondence_distance: 2.25,
           marker_color: [0.8, 0.4, 0.0]
         }
         obstacle: {
