@@ -22,6 +22,33 @@
         hazmat:
           active_support: 1.0
           marker_color: [0.0, 0.8, 0.0]
+        combustible:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        flammable_liquid:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        inhalation_hazard:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        dangerous:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        flammable_solid:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        non_flammable_gas:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        explosive:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        infectious_substance:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        oxidizer:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
         start_check_pipe:
           active_support: 1.0
           marker_color: [0.0, 0.8, 0.8]
