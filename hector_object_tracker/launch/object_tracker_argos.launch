@@ -24,6 +24,31 @@
       <param name="frame_id" value="world" />
 
       <rosparam subst_value="True">
+        
+        flammable_liquid:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        inhalation_hazard:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        dangerous:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        flammable_solid:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        non_flammable_gas:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        explosive:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        infectious_substance:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        oxidizer:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
 
         # known checkpoints
         dial_gauge: {
@@ -91,17 +116,7 @@
           max_correspondence_distance: 3.0,
           marker_color:[0.5, 1.0, 0.8]
         }
-        verification_services:
-          - service: thermal_self_filter/verify_percept
-            type: percept
-            class_id: heat_source
-            required: true
-          - service: object_verification/hotspot_filter
-            type: percept
-            class_id: heat_source
-            required: true
       </rosparam>
-mo
       <remap from="get_distance_to_obstacle" to="/move_group/get_distance_to_obstacle" />
       <remap from="visualization_marker" to="worldmodel/visualization_marker" />
       <remap from="visualization_marker_array" to="worldmodel/visualization_marker_array" />
