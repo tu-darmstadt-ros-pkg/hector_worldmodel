@@ -216,7 +216,7 @@ ObjectTracker::~ObjectTracker()
 
 void ObjectTracker::sysCommandCb(const std_msgs::StringConstPtr &sysCommand)
 {
-  if (sysCommand->data == "reset") {
+  if (sysCommand->data == "reset" || sysCommand->data =="reset_worldmodel") {
     ROS_INFO("Resetting object model.");
     model.reset();
     drawings.reset();
