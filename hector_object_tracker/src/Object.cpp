@@ -267,7 +267,9 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
 
   marker.header = this->header;
   marker.action = visualization_msgs::Marker::ADD;
-  getPose(marker.pose);
+  geometry_msgs::Pose marker_pose;
+  getPose(marker_pose);
+  marker.pose = marker_pose;
   marker.ns = this->info.class_id;
 
   marker.type = visualization_msgs::Marker::ARROW;
@@ -287,7 +289,23 @@ void Object::getVisualization(visualization_msgs::MarkerArray &markers) const {
   marker.scale.x = 0.0;
   marker.scale.y = 0.0;
   marker.scale.z = 0.1;
+  marker.points.clear();
   marker.pose.position.z += 1.5 * marker.scale.z;
+  markers.markers.push_back(marker);
+
+  // arrow to ground
+  marker.type = visualization_msgs::Marker::ARROW;
+  marker.scale.x = 0.025;
+  marker.scale.y = 0.025;
+  marker.scale.z = 0.025;
+  geometry_msgs::Point start = marker_pose.position;
+  geometry_msgs::Point end = marker_pose.position;
+  end.z = 0;
+  marker.points.push_back(start);
+  marker.points.push_back(end);
+  marker.pose.position.x = marker.pose.position.y = marker.pose.position.z = 0;
+  marker.pose.orientation.x = marker.pose.orientation.y = marker.pose.orientation.z = 0;
+  marker.pose.orientation.w = 1;
   markers.markers.push_back(marker);
 }
 
