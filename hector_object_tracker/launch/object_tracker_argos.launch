@@ -24,7 +24,10 @@
       <param name="frame_id" value="world" />
 
       <rosparam subst_value="True">
-        
+        barrel:
+          active_support: 1.0
+          marker_color: [0.0, 0.0, 0.8]
+          max_correspondence_distance: 0.5
         flammable_liquid:
           active_support: 1.0
           marker_color: [0.0, 0.8, 0.0]
