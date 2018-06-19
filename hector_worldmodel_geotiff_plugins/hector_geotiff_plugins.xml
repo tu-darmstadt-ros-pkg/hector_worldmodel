@@ -9,4 +9,9 @@
       This is a MapWriter plugin that draws QRCode detections from the worldmodel in the map.
     </description>
   </class>
+  <class name="hector_worldmodel_geotiff_plugins/GenericMapWriter" type="hector_worldmodel_geotiff_plugins::GenericMapWriter" base_class_type="hector_geotiff::MapWriterPluginInterface">
+    <description>
+      This is a MapWriter plugin that draws QRCode detections from the worldmodel in the map.
+    </description>
+  </class>  
 </library>
