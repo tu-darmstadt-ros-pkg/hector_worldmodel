@@ -337,7 +337,7 @@ public:
     boost::gregorian::date now_date(now.date());
     boost::posix_time::time_duration now_time(now.time_of_day().hours(), now.time_of_day().minutes(), now.time_of_day().seconds(), 0);
 
-    std::ofstream description_file((interface->getBasePathAndFileName() + "_qr.csv").c_str());
+    std::ofstream description_file((interface->getBasePathAndFileName() + "_objects.csv").c_str());
     if (description_file.is_open()) {
       description_file << "\"objects\"" << std::endl;
       description_file << "\"1.0\"" << std::endl;
