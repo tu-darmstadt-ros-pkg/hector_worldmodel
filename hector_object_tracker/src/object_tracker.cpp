@@ -37,6 +37,7 @@ ObjectTracker::ObjectTracker()
   parameter(_inactive_time)     = 0.0;
   parameter(_min_distance_between_objects) = 0.0;
   parameter(_max_correspondence_distance) = 1.0;
+  parameter(_max_percept_distance) = -1.0;
 
   //Used to keep position of certain objects fixed
   parameter(_position_fixed)  = false;
@@ -406,6 +407,20 @@ void ObjectTracker::imagePerceptCb(const hector_worldmodel_msgs::ImagePerceptCon
       if (response.distance > 0.0) {
         // distance = std::max(response.distance - 0.1f, 0.0f);
         distance = std::max(response.distance, 0.0f);
+
+        double max_dist_for_class_id = parameter(_max_percept_distance, percept->info.class_id);
+
+        // Only if a max dist is set, check (defaults to -1.0 if not set)
+        if (max_dist_for_class_id > 0.0){
+          if (distance > max_dist_for_class_id){
+            ROS_INFO("Ignoring percept of class %s due to distance %f higher than allowed %f",
+                     percept->info.class_id.c_str(),
+                     distance,
+                     max_dist_for_class_id);
+            return;
+          }
+        }
+
         pose.setOrigin(pose.getOrigin().normalized() * distance);
         ROS_DEBUG("Projected percept to a distance of %.1f m", distance);
       } else {
