@@ -329,25 +329,33 @@ public:
     std::string team_name;
     std::string country;
     std::string mission_name;
+    std::string robot_name;
     nh_.getParamCached("/team", team_name);
     nh_.getParamCached("/country", country);
     nh_.getParamCached("/mission", mission_name);
+    nh_.getParamCached("/robot_name", robot_name);
+
+    if (team_name.empty()) team_name = "Hector Darmstadt";
+    if (country.empty()) country = "Germany";
+    if (mission_name.empty()) mission_name = "prelim";
+    if (robot_name.empty()) robot_name = "Hector Jasmine";
 
     boost::posix_time::ptime now = ros::Time::now().toBoost();
     boost::gregorian::date now_date(now.date());
     boost::posix_time::time_duration now_time(now.time_of_day().hours(), now.time_of_day().minutes(), now.time_of_day().seconds(), 0);
 
-    std::ofstream description_file((interface->getBasePathAndFileName() + "_objects.csv").c_str());
+    std::ofstream description_file((interface->getBasePathAndFileName() + "_pois.csv").c_str());
     if (description_file.is_open()) {
-      description_file << "\"objects\"" << std::endl;
-      description_file << "\"1.0\"" << std::endl;
+      description_file << "\"pois\"" << std::endl;
+      description_file << "\"1.2\"" << std::endl;
       if (!team_name.empty()) description_file << "\"" << team_name << "\"" << std::endl;
       if (!country.empty()) description_file << "\"" << country << "\"" << std::endl;
       description_file << "\"" << now_date << "\"" << std::endl;
       description_file << "\"" << now_time << "\"" << std::endl;
       if (!mission_name.empty()) description_file << "\"" << mission_name << "\"" << std::endl;
       description_file << std::endl;
-      description_file << "id,time,class_id,text,x,y,z" << std::endl;
+      //description_file << "id,time,class_id,text,x,y,z" << std::endl; //old format
+      description_file << "id,time,text,x,y,z,robot,mode,type" << std::endl;
     }
 
 //    hector_worldmodel_msgs::Object test_obj;
@@ -413,17 +421,25 @@ public:
       // add only largest qr codes into geotiff
       
       //if (isLargest(object, data.response.model.objects)) {
+      // Default color for hazards
+      //MapWriterInterface::Color obj_color(255, 100, 30);
+
           Eigen::Vector2f coords;
           coords.x() = object.pose.pose.position.x;
           coords.y() = object.pose.pose.position.y;
-          interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(10,10,240));
+          if (object.info.class_id == "victim"){
+            interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(240, 10, 10));
+          }else{
+            interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(255, 100, 30));
+          }
       //}
       
-
+      // New format for double checking: "id,time,text,x,y,z,robot,mode,type"
       if (description_file.is_open()) {
         boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
         boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
-        description_file << counter << "," << time << "," << object.info.class_id << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
+        //description_file << counter << "," << time << "," << object.info.class_id << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
+        description_file << counter << "," << time << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << "," << robot_name << ",A," << object.info.class_id << std::endl;
       }
     }
 
