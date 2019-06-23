@@ -430,7 +430,7 @@ public:
           if (object.info.class_id == "victim"){
             interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(240, 10, 10));
           }else{
-            interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(255, 100, 30));
+            interface->drawObjectOfInterest(coords, boost::lexical_cast<std::string>(counter), MapWriterInterface::Color(255, 100, 30), hector_geotiff::SHAPE_DIAMOND);
           }
       //}
       
