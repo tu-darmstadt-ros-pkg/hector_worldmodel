@@ -439,7 +439,7 @@ public:
         boost::posix_time::time_duration time_of_day(object.header.stamp.toBoost().time_of_day());
         boost::posix_time::time_duration time(time_of_day.hours(), time_of_day.minutes(), time_of_day.seconds(), 0);
         //description_file << counter << "," << time << "," << object.info.class_id << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << std::endl;
-        description_file << counter << "," << time << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << "," << robot_name << ",A," << object.info.class_id << std::endl;
+        description_file << counter << "," << time << "," << object.info.name << "," << object.pose.pose.position.x << "," << object.pose.pose.position.y << "," << object.pose.pose.position.z << ",\"" << robot_name << "\",A," << object.info.class_id << std::endl;
       }
     }
 
