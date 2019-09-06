@@ -129,6 +129,6 @@
     </node>
 
     <!-- Verification Services -->
-    <node pkg="argo_vision_worldmodel_interface" type="hotspot_filter.py" name="hotspot_filter" output="screen" />
+<!--    <node pkg="argo_vision_worldmodel_interface" type="hotspot_filter.py" name="hotspot_filter" output="screen" />-->
 
 </launch>
