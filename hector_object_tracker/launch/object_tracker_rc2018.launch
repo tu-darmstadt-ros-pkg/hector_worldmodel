@@ -1,14 +1,6 @@
 <?xml version="1.0"?>
 
 <launch>
-
-    <arg name="default_checkpoint" value="
-        pending_support: 1.0,
-        active_support: 1.0,
-        min_height: -10,
-        max_height: 10,
-        with_orientation: true,
-    " />
     <arg name="default_object_dynamic" value="
         pending_support: 1.0,
         min_height: -1.5,
@@ -52,53 +44,6 @@
         oxidizer:
           active_support: 1.0
           marker_color: [0.0, 0.8, 0.0]
-
-        # known checkpoints
-        dial_gauge: {
-          $(arg default_checkpoint)
-          position_fixed: true,
-          marker_color: [0.8, 0.0, 0.0]
-        }
-        level_gauge: {
-          $(arg default_checkpoint)
-          position_fixed: true,
-          marker_color: [0.0, 0.0, 0.8]
-        }
-        valve: {
-          $(arg default_checkpoint)
-          position_fixed: true,
-          marker_color: [0.0, 0.8, 0.0]
-        }
-        hotspot: {
-          $(arg default_checkpoint)
-          position_fixed: true,
-          marker_color: [0.8, 0.8, 0.0]
-        }
-
-        # detected checkpoints (update position and orientation offset)
-        dial_gauge_detected: {
-          $(arg default_checkpoint)
-          marker_color: [1.0, 0.0, 0.0]
-        }
-        level_gauge_detected: {
-          $(arg default_checkpoint)
-          marker_color: [0.0, 0.0, 1.0]
-        }
-        valve_detected: {
-          $(arg default_checkpoint)
-          marker_color: [0.0, 1.0, 0.0]
-        }
-        hotspot_detected: {
-          $(arg default_checkpoint)
-          marker_color: [1.0, 1.0, 0.0]
-        }
-
-        # further known objects
-        object_of_interest: {
-          $(arg default_checkpoint)
-          position_fixed: true,
-          marker_color: [0.0, 0.8, 0.8]
-        }
 
         # dynamically detected objects
         heat_source: {
