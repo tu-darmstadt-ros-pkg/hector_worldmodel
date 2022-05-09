@@ -44,6 +44,15 @@
         oxidizer:
           active_support: 1.0
           marker_color: [0.0, 0.8, 0.0]
+        corrosive:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
+        fire_extinguisher:
+          active_support: 1.0
+          marker_color: [0.8, 0.8, 0.0]
+        spontaneously_combustible:
+          active_support: 1.0
+          marker_color: [0.0, 0.8, 0.0]
 
         # dynamically detected objects
         heat_source: {
