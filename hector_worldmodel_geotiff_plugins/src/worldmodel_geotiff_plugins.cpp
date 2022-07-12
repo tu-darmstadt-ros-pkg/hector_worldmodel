@@ -40,6 +40,14 @@
 
 #include <boost/tokenizer.hpp>
 
+#if  __cplusplus < 201703L
+	#include <experimental/filesystem>
+	namespace fs = std::experimental::filesystem;
+#else
+	#include <filesystem>
+	namespace fs = std::filesystem;
+#endif
+
 namespace hector_worldmodel_geotiff_plugins {
 
 using namespace hector_geotiff;
@@ -113,7 +121,37 @@ public:
     boost::gregorian::date now_date(now.date());
     boost::posix_time::time_duration now_time(now.time_of_day().hours(), now.time_of_day().minutes(), now.time_of_day().seconds(), 0);
 
-    std::ofstream description_file((interface->getBasePathAndFileName() + "_victims.csv").c_str());
+    std::string path;
+    if (interface->completed_map_) {
+      path = interface->getBasePathAndFileName();
+    }
+    else {
+      auto t = std::time(nullptr);
+      auto tm = *std::localtime(&t);
+      std::stringstream start_ss;
+      start_ss <<  std::put_time(&tm, "%Y-%m-%d");
+
+      std::string old_path = interface->getBasePathAndFileName();
+      std::string file_name;
+      
+      size_t pos = old_path.rfind ("/");
+      path = old_path.substr(0, pos);
+      file_name = old_path.substr(pos);
+
+      path += "/autosave";
+      if(!fs::exists(path.c_str())) {
+        fs::create_directory(path.c_str());
+      }
+
+      path += "/" + start_ss.str();
+      if(!fs::exists(path.c_str())) {
+        fs::create_directory(path.c_str());
+      }
+
+      path += "/" + file_name;
+    }
+    
+    std::ofstream description_file((path + "_victims.csv").c_str());
     if (description_file.is_open()) {
       description_file << "\"victims\"" << std::endl;
       description_file << "\"1.0\"" << std::endl;
@@ -172,7 +210,37 @@ public:
     boost::gregorian::date now_date(now.date());
     boost::posix_time::time_duration now_time(now.time_of_day().hours(), now.time_of_day().minutes(), now.time_of_day().seconds(), 0);
 
-    std::ofstream description_file((interface->getBasePathAndFileName() + "_qr.csv").c_str());
+    std::string path;
+    if (interface->completed_map_) {
+      path = interface->getBasePathAndFileName();
+    }
+    else {
+      auto t = std::time(nullptr);
+      auto tm = *std::localtime(&t);
+      std::stringstream start_ss;
+      start_ss <<  std::put_time(&tm, "%Y-%m-%d");
+
+      std::string old_path = interface->getBasePathAndFileName();
+      std::string file_name;
+      
+      size_t pos = old_path.rfind ("/");
+      path = old_path.substr(0, pos);
+      file_name = old_path.substr(pos);
+
+      path += "/autosave";
+      if(!fs::exists(path.c_str())) {
+        fs::create_directory(path.c_str());
+      }
+
+      path += "/" + start_ss.str();
+      if(!fs::exists(path.c_str())) {
+        fs::create_directory(path.c_str());
+      }
+
+    path += "/" + file_name;
+    }
+
+    std::ofstream description_file((path + "_qr.csv").c_str());
     if (description_file.is_open()) {
       description_file << "\"qr codes\"" << std::endl;
       description_file << "\"1.0\"" << std::endl;
@@ -338,13 +406,44 @@ public:
     if (team_name.empty()) team_name = "Hector Darmstadt";
     if (country.empty()) country = "Germany";
     if (mission_name.empty()) mission_name = "prelim";
-    if (robot_name.empty()) robot_name = "Hector Jasmine";
+    if (robot_name.empty()) robot_name = "Hector Asterix";
 
     boost::posix_time::ptime now = ros::Time::now().toBoost();
     boost::gregorian::date now_date(now.date());
     boost::posix_time::time_duration now_time(now.time_of_day().hours(), now.time_of_day().minutes(), now.time_of_day().seconds(), 0);
 
-    std::ofstream description_file((interface->getBasePathAndFileName() + "_pois.csv").c_str());
+    std::string path;
+    if (interface->completed_map_) {
+      path = interface->getBasePathAndFileName();
+    }
+    else {
+      auto t = std::time(nullptr);
+      auto tm = *std::localtime(&t);
+      std::stringstream start_ss;
+      start_ss <<  std::put_time(&tm, "%Y-%m-%d");
+
+      std::string old_path = interface->getBasePathAndFileName();
+      std::string file_name;
+      
+      size_t pos = old_path.rfind ("/");
+      path = old_path.substr(0, pos);
+      file_name = old_path.substr(pos);
+
+      path += "/autosave";
+      if(!fs::exists(path.c_str())) {
+        fs::create_directory(path.c_str());
+      }
+
+      path += "/" + start_ss.str();
+      if(!fs::exists(path.c_str())) {
+        fs::create_directory(path.c_str());
+      }
+
+      path += "/" + file_name;
+    }
+
+    ROS_INFO("Writing to path %s", path);
+    std::ofstream description_file((path + "_pois.csv").c_str());
     if (description_file.is_open()) {
       description_file << "\"pois\"" << std::endl;
       description_file << "\"1.2\"" << std::endl;
