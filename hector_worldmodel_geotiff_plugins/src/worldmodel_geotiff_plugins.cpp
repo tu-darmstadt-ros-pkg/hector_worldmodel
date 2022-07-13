@@ -139,14 +139,14 @@ public:
       file_name = old_path.substr(pos);
 
       if(!fs::exists(path)) {
-        ROS_ERROR("Save folder %s ", path);
+        ROS_ERROR("Save folder %s doesn't exist", path.c_str());
         return;
       }
 
       path += "/autosave";
       std::error_code error;
       if(!fs::exists(path.c_str())) {
-        fs::create_directory(path.c_str());
+        fs::create_directory(path.c_str(), error);
         if(error) {
           ROS_ERROR("Can't create autosave folder");
           return;
@@ -238,7 +238,7 @@ public:
       file_name = old_path.substr(pos);
 
       if(!fs::exists(path)) {
-        ROS_ERROR("Save folder %s ", path);
+        ROS_ERROR("Save folder %s doesn't exist", path.c_str());
         return;
       }
 
@@ -450,7 +450,7 @@ public:
       file_name = old_path.substr(pos);
 
       if(!fs::exists(path)) {
-        ROS_ERROR("Save folder %s ", path);
+        ROS_ERROR("Save folder %s doesn't exist", path.c_str());
         return;
       }
 
