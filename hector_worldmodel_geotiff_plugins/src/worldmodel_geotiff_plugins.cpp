@@ -138,9 +138,19 @@ public:
       path = old_path.substr(0, pos);
       file_name = old_path.substr(pos);
 
+      if(!fs::exists(path)) {
+        ROS_ERROR("Save folder %s ", path);
+        return;
+      }
+
       path += "/autosave";
+      std::error_code error;
       if(!fs::exists(path.c_str())) {
         fs::create_directory(path.c_str());
+        if(error) {
+          ROS_ERROR("Can't create autosave folder");
+          return;
+        }
       }
 
       path += "/" + start_ss.str();
@@ -227,9 +237,19 @@ public:
       path = old_path.substr(0, pos);
       file_name = old_path.substr(pos);
 
+      if(!fs::exists(path)) {
+        ROS_ERROR("Save folder %s ", path);
+        return;
+      }
+
       path += "/autosave";
+      std::error_code error;
       if(!fs::exists(path.c_str())) {
-        fs::create_directory(path.c_str());
+        fs::create_directory(path.c_str(), error);
+        if(error) {
+          ROS_ERROR("Can't create autosave folder");
+          return;
+        }
       }
 
       path += "/" + start_ss.str();
@@ -429,9 +449,19 @@ public:
       path = old_path.substr(0, pos);
       file_name = old_path.substr(pos);
 
+      if(!fs::exists(path)) {
+        ROS_ERROR("Save folder %s ", path);
+        return;
+      }
+
       path += "/autosave";
+      std::error_code error;
       if(!fs::exists(path.c_str())) {
-        fs::create_directory(path.c_str());
+        fs::create_directory(path.c_str(), error);
+        if(error) {
+          ROS_ERROR("Can't create autosave folder");
+          return;
+        }
       }
 
       path += "/" + start_ss.str();
