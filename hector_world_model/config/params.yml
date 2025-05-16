@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    param: 1.0
+
+    ray_projection_frames: [ "back", "front", "left", "right" ]
