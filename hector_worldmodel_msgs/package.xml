@@ -10,6 +10,7 @@
   <author email="marekdaniv@googlemail.com">Marek Daniv</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>geometry_msgs</build_depend>
   <build_depend>rosidl_default_generators</build_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
 
