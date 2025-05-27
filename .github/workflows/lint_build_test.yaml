@@ -2,10 +2,10 @@ name: Lint, Build & Test
 on:
   push:
     branches:
-      - main
+      - jazzy
   pull_request:
     branches:
-      - main
+      - jazzy
 defaults:
   run:
     shell: bash
@@ -19,28 +19,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Setup
         run: |
           sudo apt-get update && sudo apt-get install -y black clang-format cppcheck libxml2-utils
-      - name: Lint C++ code
-        run: |
-          echo "Linting C++ code..."
-          clang-format -Werror -n -style=file $(find . -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.c' -o -name '*.cc')
 
-      - name: Run cppcheck on C++ code
-        run: |
-          echo "Running cppcheck on C++ code..."
-          cppcheck --force --quiet --inline-suppr --error-exitcode=1 --language=c++ $(find . -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.c' -o -name '*.cc')
+      - name: Set up Python
+        uses: actions/setup-python@v4
 
-      - name: Lint package.xml
-        run: |
-          xmllint --noout --schema http://download.ros.org/schema/package_format3.xsd $(find . -name 'package.xml')
+      - name: Install and Run pre-commit
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --all-files
 
-      - name: Lint Python code with black 
-        run: |
-          echo "Linting Python code..."
-          black --check .
-         
+
+
 
   build-and-test:
     needs: Linting
@@ -69,7 +62,7 @@ jobs:
       - name: rosdep
         run: |
           rosdep update --rosdistro ${{ matrix.setup.rosdistro }} --include-eol-distros
-          rosdep install -y --from-paths src --ignore-src --rosdistro ${{ matrix.setup.rosdistro }} 
+          rosdep install -y --from-paths src --ignore-src --rosdistro ${{ matrix.setup.rosdistro }}
       - name: build
         run: |
           source /opt/ros/${{ matrix.setup.rosdistro }}/setup.bash
