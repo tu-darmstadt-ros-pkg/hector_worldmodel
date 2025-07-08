@@ -1,0 +1,88 @@
+#ifndef HECTOR_WORLD_MODEL_CLUSTERER_BASE_HPP
+#define HECTOR_WORLD_MODEL_CLUSTERER_BASE_HPP
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <Eigen/Geometry>
+#include <hector_world_model/object.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/header.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+
+namespace hector_world_model
+{
+
+class WorldModel;
+
+class DetectionClusterer
+{
+public:
+  DetectionClusterer( std::atomic<int> &latest_marker_id, std::shared_ptr<WorldModel> node );
+
+  ~DetectionClusterer() noexcept { };
+
+  // Add a new detection to be collected for the next clustering run
+  void virtual addDetection( std::shared_ptr<ObjectDetection> detection );
+
+  void runClustering()
+  {
+    processNewDetections();
+    fit();
+  }
+
+  void reset();
+
+  std::vector<Object> getConfirmedObjects();
+
+protected:
+  bool redundancy_criterion( const hector_world_model::ObjectDetection &d1,
+                             const hector_world_model::ObjectDetection &d2 );
+
+  // Run actual clustering algorithm
+  virtual void fit() = 0;
+  // Process new detections, add relevant non redundant detections to clustering pool
+  virtual void processNewDetections() = 0;
+
+  bool isRedundant( const ObjectDetection &new_detection );
+
+  bool closeToConfirmedObject( const ObjectDetection &new_detection );
+
+  void pubPointMarker( const double x, const double y, const double z, const int &marker_id,
+                       const int &color_idx, const double &size, const bool &is_new,
+                       rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub );
+  void pubVisualization( const ObjectDetection &detection, bool is_new, bool was_dismissed = false );
+  void pubVisualization( const ObjectCandidate &candidate, bool is_new );
+  void pubVisualization( const Object &confirmed_obj, bool is_new );
+
+  double min_object_distance_;
+  double confirmation_confidence_threshhold_;
+  double initial_center_confidence_threshhold_;
+
+  double redundancy_endpoint_distance_threshhold_;
+  double redundancy_endpoint_angle_threshhold_;
+  double redundancy_distance_threshhold_;
+
+  int max_clustering_iterations_;
+
+  std::vector<ObjectDetection> detection_queue_; // Collects all incoming detections
+  std::vector<ObjectDetection>
+      object_detections_; // Collects all detections not associated with an confirmed object
+  std::vector<ObjectCandidate>
+      object_candidates_; // Object candidates that don't have sufficient confidence yet
+  std::vector<Object> confirmed_objects_; // Confirmed objects
+
+  std::mutex detection_queue_mutex_;
+  std::mutex confirmed_objects_mutex_;
+
+  bool new_detections_received_;
+
+  std::atomic<int> &latest_marker_id_;
+
+  std::weak_ptr<WorldModel> node_;
+};
+
+} // namespace hector_world_model
+
+#endif

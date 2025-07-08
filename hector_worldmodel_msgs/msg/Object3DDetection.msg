@@ -1,0 +1,5 @@
+geometry_msgs/PointStamped position
+string class_name
+float64 detection_score
+float64 projection_support
+float64 confidence

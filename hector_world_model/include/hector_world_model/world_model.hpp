@@ -1,22 +1,28 @@
 #ifndef HECTOR_WORLD_MODEL_WORLD_MODEL_HPP
 #define HECTOR_WORLD_MODEL_WORLD_MODEL_HPP
 
+#include <Eigen/Geometry>
+#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <Eigen/Geometry>
 #include <hector_perception_msgs/msg/object_detection2_d.hpp>
-#include <hector_world_model/clustering.hpp>
-#include <hector_world_model/object.hpp>
+#include <hector_perception_msgs/msg/object_detection2_d_array.hpp>
+#include <hector_worldmodel_msgs/msg/object3_d_detection.hpp>
+#include <hector_worldmodel_msgs/srv/get_confirmed_objects.hpp>
+#include <hector_worldmodel_msgs/srv/get_distance_to_obstacle.hpp>
 #include <image_projection_msgs/srv/project_pixel_to3_d_ray.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+
+#include <hector_world_model/object.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/header.hpp>
-#include <std_msgs/msg/int32.hpp>
 
 namespace hector_world_model
 {
+
+class DBScanClusterer;
 
 typedef Eigen::Transform<float, 3, Eigen::Affine> Transform3f;
 
@@ -24,39 +30,51 @@ class WorldModel : public rclcpp::Node
 {
 public:
   WorldModel();
-  ~WorldModel() noexcept;
+  ~WorldModel();
+
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr detection_marker_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr candidate_marker_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr confirmed_marker_pub_;
 
 private:
-  //! @brief Sets up subscribers, publishers, etc. to configure the node
   void setup();
 
-  void detectionReceivedCallback( const hector_perception_msgs::msg::ObjectDetection2D &msg );
+  void declareParameters();
 
-  void setupNewClusterer( std::string const &class_name );
+  void detectionCb( const hector_perception_msgs::msg::ObjectDetection2DArray &msg );
+
+  void setupNewClustererIfNeeded( const std::string &class_name );
+
+  void timerCb();
+
+  void pub3DDetection( const ObjectDetection &obj_detection );
+
+  void getConfirmedObjectsCb(
+      const hector_worldmodel_msgs::srv::GetConfirmedObjects::Request::SharedPtr request,
+      hector_worldmodel_msgs::srv::GetConfirmedObjects::Response::SharedPtr response );
 
 private:
-  std::map<std::string, std::mutex> detection_mutex_;
-  std::map<std::string, std::mutex> candidate_mutex_;
-  std::map<std::string, std::mutex> confirmed_object_mutex_;
+  rclcpp::CallbackGroup::SharedPtr clustering_timer_group_;
+  rclcpp::CallbackGroup::SharedPtr detection_cb_group_;
 
-  std::map<std::string, std::vector<ObjectDetection>>
-      object_detections_; // Collects all detections not associated with an confirmed object
-  std::map<std::string, std::vector<ObjectCandidate>>
-      object_candidates_; // Object candidates that don't have sufficient confidence yet
-  std::map<std::string, std::vector<Object>> confirmed_objects_; // Confirmed objects
+  rclcpp::Service<hector_worldmodel_msgs::srv::GetConfirmedObjects>::SharedPtr get_confirmed_objects_srv_;
+
+  std::map<std::string, std::unique_ptr<DBScanClusterer>> clusterers_;
+  std::mutex cluster_mutex_;
+  std::vector<std::thread> clustering_threads_;
+
+  rclcpp::TimerBase::SharedPtr clustering_timer_;
+
+  rclcpp::Subscription<hector_perception_msgs::msg::ObjectDetection2DArray>::SharedPtr detection_subscriber_;
+  rclcpp::Subscription<hector_worldmodel_msgs::msg::Object3DDetection>::SharedPtr bag_subscriber_;
+
+  rclcpp::Publisher<hector_worldmodel_msgs::msg::Object3DDetection>::SharedPtr detection_publisher_;
 
   std::map<std::string, rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>::SharedPtr>
       ray_projection_clients_;
-  // std::map<std::string, <rclcpp::Client<>::SharedPtr> distance_clients_;
+  rclcpp::Client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>::SharedPtr distance_to_obstacle_client_;
 
-  rclcpp::Subscription<hector_perception_msgs::msg::ObjectDetection2D>::SharedPtr detection_subscriber_;
-  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr publisher_;
-
-  std::map<std::string, DetectionClusterer> clusterer_;
-
-  double param_ = 1.0;
-
-  std::set<std::string> known_classes_;
+  std::atomic<int> latest_marker_id_{ 0 };
 };
 
 } // namespace hector_world_model

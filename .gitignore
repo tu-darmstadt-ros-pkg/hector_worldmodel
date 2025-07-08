@@ -1,2 +1,7 @@
 *.user
 .vscode/
+.idea
+.git
+cmake-build-*
+build
+
