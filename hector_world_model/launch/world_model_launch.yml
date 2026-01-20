@@ -1,13 +1,14 @@
 launch:
-  - arg:
-      name: name
-      default: world_model
-      description: node name
-  - node:
-      pkg: hector_world_model
-      exec: world_model
-      name: "$(var name)"
-      output: screen
-      param:
-        - name: param
-          value: 1.0
+- arg:
+    name: name
+    default: world_model
+    description: node name
+- node:
+    pkg: hector_world_model
+    exec: world_model
+    name: "$(var name)"
+    output: screen
+    namespace: /athena
+    param:
+    - name: param
+      value: 1.0

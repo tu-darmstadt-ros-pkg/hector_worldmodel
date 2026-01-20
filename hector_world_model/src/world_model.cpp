@@ -160,6 +160,10 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
     // Workaround for simulation, image_projection does not use sim_time
     dist_request->point.header = detected_obj->header_;
 
+    RCLCPP_INFO( this->get_logger(), "Dist request time: %u.%u. Current time: %u.%u",
+                 dist_request->point.header.stamp.sec, dist_request->point.header.stamp.nanosec,
+                 this->now().seconds(), this->now().nanoseconds() );
+
     std::string frame_name = dist_request->point.header.frame_id;
     // Check if topic is namespaced
     if ( "/" + frame_name.substr( 0, frame_name.find( "/" ) ) == std::string( this->get_namespace() ) )

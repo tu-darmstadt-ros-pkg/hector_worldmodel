@@ -1,8 +1,10 @@
 #ifndef HECTOR_GEOTIFF_WORLDMODEL_PLUGIN_HPP
 #define HECTOR_GEOTIFF_WORLDMODEL_PLUGIN_HPP
 
+#include <fstream>
 #include <hector_geotiff_plugin_interface/geotiff_plugin_interface.hpp>
 #include <hector_worldmodel_msgs/srv/get_confirmed_objects.hpp>
+#include <iostream>
 #include <rclcpp/time.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -27,13 +29,16 @@ public:
                           QPainter &qp );
 
 private:
+  void writeToTextfile();
+
+private:
   std::shared_ptr<rclcpp::CallbackGroup> client_group_;
   std::shared_ptr<hector_geotiff_plugin_interface::GeotiffWriterInterface> geotiff_;
 
   rclcpp::Client<hector_worldmodel_msgs::srv::GetConfirmedObjects>::SharedPtr get_confirmed_objects_client_;
 
   rclcpp::TimerBase::SharedPtr update_timer_;
-  std::vector<std::pair<std::string, Eigen::Vector2f>> latest_object_list_;
+  std::vector<std::pair<std::string, geometry_msgs::msg::PointStamped>> latest_object_list_;
 
   std::set<std::string> hazmat_classes_;
   std::set<std::string> object_classes_;

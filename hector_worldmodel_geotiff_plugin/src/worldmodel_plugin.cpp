@@ -34,9 +34,7 @@ void WorldmodelPlugin::initialize( const rclcpp::Node::SharedPtr &node )
                   const auto &class_name = result->class_names.at( i );
                   const auto &position = result->positions.at( i );
 
-                  Eigen::Vector2f coords( position.point.x, position.point.y );
-
-                  latest_object_list_.emplace_back( class_name, coords );
+                  latest_object_list_.emplace_back( class_name, position );
                 }
               } );
 
@@ -59,7 +57,9 @@ void WorldmodelPlugin::draw(
   for ( const auto &confirmed_object : latest_object_list_ ) {
     const auto &class_name = confirmed_object.first;
 
-    const auto &coords = confirmed_object.second;
+    const auto coords =
+        Eigen::Vector2f{ confirmed_object.second.point.x, confirmed_object.second.point.y };
+
     Eigen::Vector2i geo_coords = geotiff_->transformWorldToGeoCoords( coords );
 
     drawTypeDependent( class_name, geo_coords, qp );
@@ -84,6 +84,46 @@ void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
     return;
   }
   RCLCPP_WARN( node_->get_logger(), "Unknown class name: %s", class_name.c_str() );
+  writeToTextfile();
+}
+
+void WorldmodelPlugin::writeToTextfile()
+{
+  const std::string filename = "~/hector/RoboCup2025-Hector-Labyrinth-SemiFinals-17:00-pois.csv";
+
+  // Open the file in output mode with truncation
+  std::ofstream file( filename, std::ios::out | std::ios::trunc );
+
+  if ( !file ) {
+    RCLCPP_WARN( node_->get_logger(), "Could not open text file %s to save maze objects",
+                 filename.c_str() );
+    return;
+  }
+
+  // Write to the file
+  file << "pois\n";
+  file << "1.3\n";
+  file << "Hector\n";
+  file << "Germany\n";
+  file << "2025-07-19\n";
+  file << "17:00\n";
+  file << "SemiFinals\n";
+
+  int idx = 0;
+  for ( const auto &confirmed_object : latest_object_list_ ) {
+    file << idx++ << ", ";
+
+    rclcpp::Time stamp( confirmed_object.second.header.stamp );
+    std::time_t time_t_stamp = static_cast<time_t>( stamp.seconds() );
+    file << std::put_time( std::gmtime( &time_t_stamp ), "%H:%M:%S" ) << ", ";
+
+    const auto pos = confirmed_object.second.point;
+    file << pos.x << ", ";
+    file << pos.y << ", ";
+    file << pos.z << ", ";
+    file << node_->get_namespace() << ", ";
+    file << "exploration" << "\n";
+  }
 }
 
 } // namespace hector_worldmodel_geotiff_plugin
