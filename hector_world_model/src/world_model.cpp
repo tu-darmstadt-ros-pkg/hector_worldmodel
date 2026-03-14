@@ -84,16 +84,7 @@ void WorldModel::setup()
       std::bind( &WorldModel::getConfirmedObjectsCb, this, std::placeholders::_1,
                  std::placeholders::_2 ) );
 
-  /*ray_projection_client_ = this->create_client<image_projection_msgs::srv::ProjectPixelTo3DRay>(
-      std::string( this->get_namespace() ) + "/periodic_image_projection/project_pixel_to_3d_ray",
-      rclcpp::QoS( 10 ), detection_cb_group_ );
-
-  if ( !ray_projection_client_->wait_for_service( std::chrono::seconds( 5 ) ) ) {
-    RCLCPP_ERROR( this->get_logger(), "Ray projection service not available after waiting" );
-    // Handle failure: maybe exit or retry later
-  } else {
-    RCLCPP_INFO( this->get_logger(), "Service is available" );
-  }*/
+  //ray_projection_clients_ = std::map<std::string, rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>>();
 
   distance_to_obstacle_client_ =
       this->create_client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>(
@@ -127,9 +118,14 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
 {
   // If camera frame was not encountered before add new client
   if ( ray_projection_clients_.find( msg.header.frame_id ) == ray_projection_clients_.end() ) {
+
+    // /athena/front_wideangle/pinhole_front/image_rect_color or /athena/back_wideangle/pinhole_front/image_rect_color
+    bool is_front = msg.header.frame_id.find("front") != std::string::npos;
+    std::string service_topic = is_front ? "image_projection_pinhole_front" : "image_projection_pinhole_back";
+
     ray_projection_clients_[msg.header.frame_id] =
         this->create_client<image_projection_msgs::srv::ProjectPixelTo3DRay>(
-            std::string( this->get_namespace() ) + "/" + msg.header.frame_id + "/project_pixel_to_ray",
+            std::string( this->get_namespace() ) + "/" + service_topic + "/project_pixel_to_ray",
             rclcpp::QoS( 10 ), detection_cb_group_ );
   }
 
@@ -146,25 +142,29 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
     request->pixel.point.y = ( bb.bottom - bb.top ) / 2 + bb.top;
     request->pixel.point.x = ( bb.right - bb.left ) / 2 + bb.left;
 
-    /*ray_projection_client->async_send_request(
+    ray_projection_client->async_send_request(
         request,
         [this, detected_obj](
             rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>::SharedFuture response )
-       { std::shared_ptr<hector_worldmodel_msgs::srv::GetDistanceToObstacle::Request> dist_request =
-              std::make_shared<hector_worldmodel_msgs::srv::GetDistanceToObstacle::Request>();
-          auto result = response.get();*/
+       { 
+        auto result = response.get();
 
-    auto dist_request =
-        std::make_shared<hector_worldmodel_msgs::srv::GetDistanceToObstacle::Request>();
+        auto dist_request =
+            std::make_shared<hector_worldmodel_msgs::srv::GetDistanceToObstacle::Request>();
 
-    // Workaround for simulation, image_projection does not use sim_time
-    dist_request->point.header = detected_obj->header_;
+        // Workaround for simulation, image_projection does not use sim_time
+        dist_request->point.header = detected_obj->header_;
 
-    RCLCPP_INFO( this->get_logger(), "Dist request time: %u.%u. Current time: %u.%u",
-                 dist_request->point.header.stamp.sec, dist_request->point.header.stamp.nanosec,
-                 this->now().seconds(), this->now().nanoseconds() );
+        RCLCPP_INFO( this->get_logger(), "Dist request time: %u.%u. Current time: %u.%u",
+                    dist_request->point.header.stamp.sec, dist_request->point.header.stamp.nanosec,
+                    this->now().seconds(), this->now().nanoseconds() );
 
-    std::string frame_name = dist_request->point.header.frame_id;
+        dist_request->point.point.x = result->ray.point.x;
+        dist_request->point.point.y = result->ray.point.y;
+        dist_request->point.point.z = result->ray.point.z;
+
+    
+    /*
     // Check if topic is namespaced
     if ( "/" + frame_name.substr( 0, frame_name.find( "/" ) ) == std::string( this->get_namespace() ) )
       // Remove namespace
@@ -181,29 +181,29 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
 
     dist_request->point.point.x = camera_coords.x();
     dist_request->point.point.y = camera_coords.y();
-    dist_request->point.point.z = camera_coords.z();
+    dist_request->point.point.z = camera_coords.z();*/
 
-    distance_to_obstacle_client_->async_send_request(
-        dist_request,
-        [this, detected_obj](
-            rclcpp::Client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>::SharedFuture response ) {
-          auto result = response.get();
+        distance_to_obstacle_client_->async_send_request(
+            dist_request,
+            [this, detected_obj](
+                rclcpp::Client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>::SharedFuture response ) {
+              auto result = response.get();
 
-          detected_obj->pose_.translation() = Eigen::Vector3d(
-              result->end_point.point.x, result->end_point.point.y, result->end_point.point.z );
-          detected_obj->direction_ = detected_obj->pose_.translation().normalized();
-          detected_obj->distance_ = result->distance;
+              detected_obj->pose_.translation() = Eigen::Vector3d(
+                  result->end_point.point.x, result->end_point.point.y, result->end_point.point.z );
+              detected_obj->direction_ = detected_obj->pose_.translation().normalized();
+              detected_obj->distance_ = result->distance;
 
-          detected_obj->projection_support_ = ( 1.0 - exp( -1.0 / ( result->distance ) ) );
-          detected_obj->calculateConfidence();
+              detected_obj->projection_support_ = ( 1.0 - exp( -1.0 / ( result->distance ) ) );
+              detected_obj->calculateConfidence();
 
-          setupNewClustererIfNeeded( detected_obj->class_name_ );
+              setupNewClustererIfNeeded( detected_obj->class_name_ );
 
-          clusterers_.at( detected_obj->class_name_ )->addDetection( detected_obj );
+              clusterers_.at( detected_obj->class_name_ )->addDetection( detected_obj );
 
-          pub3DDetection( *detected_obj );
-        } );
-    //} );
+              pub3DDetection( *detected_obj );
+            } );
+    } );
   }
 }
 

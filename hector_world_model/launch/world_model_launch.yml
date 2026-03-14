@@ -9,6 +9,4 @@ launch:
     name: "$(var name)"
     output: screen
     namespace: /athena
-    param:
-    - name: param
-      value: 1.0
+
