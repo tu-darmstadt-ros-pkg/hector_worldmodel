@@ -12,7 +12,7 @@
 namespace hector_worldmodel_geotiff_plugin
 {
 
-class WorldmodelPlugin final : public hector_geotiff_plugin_interface::GeotiffFunctionPlugin
+class WorldmodelPlugin final : public hector_geotiff_plugin_interface::GeotiffPluginInterface
 {
 public:
   void initialize( const rclcpp::Node::SharedPtr &node ) override;

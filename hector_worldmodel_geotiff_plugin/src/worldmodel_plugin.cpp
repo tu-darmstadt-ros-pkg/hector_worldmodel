@@ -131,4 +131,4 @@ void WorldmodelPlugin::writeToTextfile()
 #include <pluginlib/class_list_macros.hpp>
 
 PLUGINLIB_EXPORT_CLASS( hector_worldmodel_geotiff_plugin::WorldmodelPlugin,
-                        hector_geotiff_plugin_interface::GeotiffFunctionPlugin )
+                        hector_geotiff_plugin_interface::GeotiffPluginInterface )
