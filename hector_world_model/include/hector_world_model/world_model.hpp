@@ -75,7 +75,6 @@ private:
   rclcpp::Client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>::SharedPtr distance_to_obstacle_client_;
 
   std::atomic<int> latest_marker_id_{ 0 };
-
 };
 
 } // namespace hector_world_model

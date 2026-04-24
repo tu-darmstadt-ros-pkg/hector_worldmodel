@@ -84,7 +84,7 @@ void WorldModel::setup()
       std::bind( &WorldModel::getConfirmedObjectsCb, this, std::placeholders::_1,
                  std::placeholders::_2 ) );
 
-  //ray_projection_clients_ = std::map<std::string, rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>>();
+  // ray_projection_clients_ = std::map<std::string, rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>>();
 
   distance_to_obstacle_client_ =
       this->create_client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>(
@@ -120,8 +120,9 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
   if ( ray_projection_clients_.find( msg.header.frame_id ) == ray_projection_clients_.end() ) {
 
     // /athena/front_wideangle/pinhole_front/image_rect_color or /athena/back_wideangle/pinhole_front/image_rect_color
-    bool is_front = msg.header.frame_id.find("front") != std::string::npos;
-    std::string service_topic = is_front ? "image_projection_pinhole_front" : "image_projection_pinhole_back";
+    bool is_front = msg.header.frame_id.find( "front" ) != std::string::npos;
+    std::string service_topic =
+        is_front ? "image_projection_pinhole_front" : "image_projection_pinhole_back";
 
     ray_projection_clients_[msg.header.frame_id] =
         this->create_client<image_projection_msgs::srv::ProjectPixelTo3DRay>(
@@ -145,65 +146,65 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
     ray_projection_client->async_send_request(
         request,
         [this, detected_obj](
-            rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>::SharedFuture response )
-       { 
-        auto result = response.get();
+            rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>::SharedFuture response ) {
+          auto result = response.get();
 
-        auto dist_request =
-            std::make_shared<hector_worldmodel_msgs::srv::GetDistanceToObstacle::Request>();
+          auto dist_request =
+              std::make_shared<hector_worldmodel_msgs::srv::GetDistanceToObstacle::Request>();
 
-        // Workaround for simulation, image_projection does not use sim_time
-        dist_request->point.header = detected_obj->header_;
+          // Workaround for simulation, image_projection does not use sim_time
+          dist_request->point.header = detected_obj->header_;
 
-        RCLCPP_INFO( this->get_logger(), "Dist request time: %u.%u. Current time: %u.%u",
-                    dist_request->point.header.stamp.sec, dist_request->point.header.stamp.nanosec,
-                    this->now().seconds(), this->now().nanoseconds() );
+          RCLCPP_INFO( this->get_logger(), "Dist request time: %u.%u. Current time: %u.%u",
+                       dist_request->point.header.stamp.sec, dist_request->point.header.stamp.nanosec,
+                       this->now().seconds(), this->now().nanoseconds() );
 
-        dist_request->point.point.x = result->ray.point.x;
-        dist_request->point.point.y = result->ray.point.y;
-        dist_request->point.point.z = result->ray.point.z;
+          dist_request->point.point.x = result->ray.point.x;
+          dist_request->point.point.y = result->ray.point.y;
+          dist_request->point.point.z = result->ray.point.z;
 
-    
-    /*
-    // Check if topic is namespaced
-    if ( "/" + frame_name.substr( 0, frame_name.find( "/" ) ) == std::string( this->get_namespace() ) )
-      // Remove namespace
-      dist_request->point.header.frame_id = frame_name.substr( frame_name.find( "/" ) + 1 );
+          /*
+          // Check if topic is namespaced
+          if ( "/" + frame_name.substr( 0, frame_name.find( "/" ) ) == std::string( this->get_namespace() ) )
+            // Remove namespace
+            dist_request->point.header.frame_id = frame_name.substr( frame_name.find( "/" ) + 1 );
 
-    Eigen::Matrix3d K;
-    K << 360.00051498413086, 0.0, 360.0, 0.0, 360.00051498413086, 240.0, 0.0, 0.0, 1.0;
-    // Convert to homogeneous pixel coordinates
-    Eigen::Vector3d pixel_coords( request->pixel.point.x, request->pixel.point.y, 1.0 );
+          Eigen::Matrix3d K;
+          K << 360.00051498413086, 0.0, 360.0, 0.0, 360.00051498413086, 240.0, 0.0, 0.0, 1.0;
+          // Convert to homogeneous pixel coordinates
+          Eigen::Vector3d pixel_coords( request->pixel.point.x, request->pixel.point.y, 1.0 );
 
-    // Convert to camera coordinates (up to scale)
-    Eigen::Vector3d camera_coords = K.inverse() * pixel_coords;
-    // dist_request->point.point = result->ray.point;
+          // Convert to camera coordinates (up to scale)
+          Eigen::Vector3d camera_coords = K.inverse() * pixel_coords;
+          // dist_request->point.point = result->ray.point;
 
-    dist_request->point.point.x = camera_coords.x();
-    dist_request->point.point.y = camera_coords.y();
-    dist_request->point.point.z = camera_coords.z();*/
+          dist_request->point.point.x = camera_coords.x();
+          dist_request->point.point.y = camera_coords.y();
+          dist_request->point.point.z = camera_coords.z();*/
 
-        distance_to_obstacle_client_->async_send_request(
-            dist_request,
-            [this, detected_obj](
-                rclcpp::Client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>::SharedFuture response ) {
-              auto result = response.get();
+          distance_to_obstacle_client_->async_send_request(
+              dist_request,
+              [this, detected_obj](
+                  rclcpp::Client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>::SharedFuture
+                      response ) {
+                auto result = response.get();
 
-              detected_obj->pose_.translation() = Eigen::Vector3d(
-                  result->end_point.point.x, result->end_point.point.y, result->end_point.point.z );
-              detected_obj->direction_ = detected_obj->pose_.translation().normalized();
-              detected_obj->distance_ = result->distance;
+                detected_obj->pose_.translation() =
+                    Eigen::Vector3d( result->end_point.point.x, result->end_point.point.y,
+                                     result->end_point.point.z );
+                detected_obj->direction_ = detected_obj->pose_.translation().normalized();
+                detected_obj->distance_ = result->distance;
 
-              detected_obj->projection_support_ = ( 1.0 - exp( -1.0 / ( result->distance ) ) );
-              detected_obj->calculateConfidence();
+                detected_obj->projection_support_ = ( 1.0 - exp( -1.0 / ( result->distance ) ) );
+                detected_obj->calculateConfidence();
 
-              setupNewClustererIfNeeded( detected_obj->class_name_ );
+                setupNewClustererIfNeeded( detected_obj->class_name_ );
 
-              clusterers_.at( detected_obj->class_name_ )->addDetection( detected_obj );
+                clusterers_.at( detected_obj->class_name_ )->addDetection( detected_obj );
 
-              pub3DDetection( *detected_obj );
-            } );
-    } );
+                pub3DDetection( *detected_obj );
+              } );
+        } );
   }
 }
 
