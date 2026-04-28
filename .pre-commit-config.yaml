@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v20.1.4
+    rev: v22.1.4
     hooks:
       - id: clang-format
         name: Clang Format
@@ -17,14 +17,14 @@ repos:
         pass_filenames: false
 
   - repo: https://github.com/psf/black
-    rev: 25.1.0
+    rev: 26.3.1
     hooks:
       - id: black
         name: Black
         language_version: python3
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: check-yaml
@@ -40,7 +40,7 @@ repos:
 
 
   - repo: https://github.com/Joschi3/package_xml_validation.git
-    rev: v1.1.7
+    rev: v1.4.2
     hooks:
       - id: format-package-xml
         name: Validate and Format package.xml

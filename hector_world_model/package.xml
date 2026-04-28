@@ -10,9 +10,11 @@
   <author email="marek.daniv@stud.tu-darmstadt.de">Marek Daniv</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>eigen</depend>
   <depend>hector_perception_msgs</depend>
   <depend>hector_worldmodel_msgs</depend>
   <depend>image_projection_msgs</depend>
+  <depend>libopencv-dev</depend>
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>visualization_msgs</depend>

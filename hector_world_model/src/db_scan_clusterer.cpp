@@ -204,14 +204,9 @@ std::vector<int> DBScanClusterer::calculateCluster( const Point &source_point )
 }
 
 inline bool DBScanClusterer::isWithinEpsilon( const Point &p1, const Point &p2 )
-{
-  return d( p1, p2 ) <= epsilon_;
-}
+{ return d( p1, p2 ) <= epsilon_; }
 
 inline double DBScanClusterer::d( const Point &p1, const Point &p2 )
-{
-
-  return ( p1.position - p2.position ).norm();
-}
+{ return ( p1.position - p2.position ).norm(); }
 
 } // namespace hector_world_model
