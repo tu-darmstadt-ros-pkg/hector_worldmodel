@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <library path="hector_worldmodel_geotiff_plugin">
-    <class type="hector_worldmodel_geotiff_plugin::WorldmodelPlugin" base_class_type="hector_geotiff_plugin_interface::GeotiffFunctionPlugin">
+    <class type="hector_worldmodel_geotiff_plugin::WorldmodelPlugin" base_class_type="hector_geotiff_plugin_interface::GeotiffPluginInterface">
         <description>Plugin for the worldmodel</description>
     </class>
 </library>

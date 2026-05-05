@@ -24,7 +24,8 @@ public:
    *
    * @param geotiff_writer The GeotiffWriterInterface to draw on.
    */
-  void draw( std::shared_ptr<hector_geotiff_plugin_interface::GeotiffWriterInterface> geotiff ) override;
+  void draw( std::shared_ptr<hector_geotiff_plugin_interface::GeotiffWriterInterface> geotiff_writer )
+      override;
   void drawTypeDependent( const std::string &class_name, const Eigen::Vector2i &geo_coords,
                           QPainter &qp );
 
