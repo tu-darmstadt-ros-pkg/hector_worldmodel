@@ -5,7 +5,7 @@ namespace hector_world_model
 {
 
 DBScanClusterer::DBScanClusterer( std::atomic<int> &latest_marker_id,
-                                  std::shared_ptr<WorldModel> node )
+                                  const std::shared_ptr<WorldModel> &node )
     : DetectionClusterer( latest_marker_id, node )
 {
   min_neighbours_ = node->get_parameter( "min_neighbours" ).get_value<int>();
@@ -18,10 +18,10 @@ void DBScanClusterer::fit()
     return;
   new_detections_received_ = false;
 
-  // Write back results to object candidates and new detection assingments
+  // Write back results to object candidates and new detection assignments
   // writeClusteringResults( assignments, center_confidences, centers );
 
-  int n_clusters = run_db_scan();
+  const int n_clusters = run_db_scan();
 
   RCLCPP_INFO( node_.lock()->get_logger(), "DBScan found %i clusters", n_clusters );
   object_candidates_.resize( n_clusters );
@@ -30,7 +30,7 @@ void DBScanClusterer::fit()
   confirmed_objects_.clear();
   promoteObjectCandidates();
 
-  // Check which object candidates have sufficient confidence and remove their assinged detections
+  // Check which object candidates have sufficient confidence and remove their assigned detections
 }
 
 void DBScanClusterer::processNewDetections()
@@ -57,7 +57,7 @@ void DBScanClusterer::processNewDetections()
     }
   }
 
-  RCLCPP_INFO( node_.lock()->get_logger(), "Current amount of detections: %i",
+  RCLCPP_INFO( node_.lock()->get_logger(), "Current amount of detections: %lu",
                object_detections_.size() );
 }
 
@@ -81,17 +81,17 @@ void DBScanClusterer::processClusteringResults()
     auto earliest_discovery_time = node_.lock()->get_clock()->now();
     builtin_interfaces::msg::Time earliest_stamp;
 
-    for ( const size_t &detec_idx : associated_detections.at( i ) ) {
-      double detec_confidence = object_detections_.at( detec_idx ).confidence_;
-      pos += ( object_detections_.at( detec_idx ).pose_.translation() * detec_confidence );
-      confidence_sum += detec_confidence;
+    for ( const size_t &detection_idx : associated_detections.at( i ) ) {
+      double detection_confidence = object_detections_.at( detection_idx ).confidence_;
+      pos += ( object_detections_.at( detection_idx ).pose_.translation() * detection_confidence );
+      confidence_sum += detection_confidence;
 
-      class_name = object_detections_.at( detec_idx ).class_name_;
+      class_name = object_detections_.at( detection_idx ).class_name_;
 
-      auto discovery_time = rclcpp::Time( object_detections_.at( detec_idx ).header_.stamp );
+      auto discovery_time = rclcpp::Time( object_detections_.at( detection_idx ).header_.stamp );
       if ( discovery_time < earliest_discovery_time ) {
         earliest_discovery_time = discovery_time;
-        earliest_stamp = object_detections_.at( detec_idx ).header_.stamp;
+        earliest_stamp = object_detections_.at( detection_idx ).header_.stamp;
       }
     }
     auto &candidate = object_candidates_.at( i );
@@ -113,7 +113,7 @@ void DBScanClusterer::promoteObjectCandidates()
   for ( size_t i = 0; i < object_candidates_.size(); i++ ) {
     RCLCPP_INFO( node_.lock()->get_logger(), "Considering promoting candidate with confidence %f",
                  object_candidates_[i].aggregated_confidence_ );
-    if ( object_candidates_[i].aggregated_confidence_ > confirmation_confidence_threshhold_ ) {
+    if ( object_candidates_[i].aggregated_confidence_ > confirmation_confidence_threshold_ ) {
       // Move object candidate to confirmed objects
       auto new_confirmed_obj = Object( object_candidates_[i], latest_marker_id_++ );
       confirmed_objects_.push_back( new_confirmed_obj );
@@ -147,7 +147,7 @@ int DBScanClusterer::expandCluster( Point &point, int clusterID )
 {
   std::vector<int> cluster_seeds = calculateCluster( point );
 
-  if ( cluster_seeds.size() < (size_t)min_neighbours_ ) {
+  if ( cluster_seeds.size() < static_cast<size_t>( min_neighbours_ ) ) {
     point.clusterID = NOISE;
     return FAILURE;
   } else {
@@ -168,7 +168,7 @@ int DBScanClusterer::expandCluster( Point &point, int clusterID )
       std::vector<int> cluster_neighbours =
           calculateCluster( clustering_data_.at( cluster_seeds[i] ) );
 
-      if ( cluster_neighbours.size() < (size_t)min_neighbours_ )
+      if ( cluster_neighbours.size() < static_cast<size_t>( min_neighbours_ ) )
         continue;
 
       for ( const auto &neighbour_idx : cluster_neighbours ) {
@@ -189,7 +189,7 @@ int DBScanClusterer::expandCluster( Point &point, int clusterID )
   }
 }
 
-std::vector<int> DBScanClusterer::calculateCluster( const Point &source_point )
+std::vector<int> DBScanClusterer::calculateCluster( const Point &source_point ) const
 {
   int index = 0;
   std::vector<int> cluster_index;
@@ -203,7 +203,7 @@ std::vector<int> DBScanClusterer::calculateCluster( const Point &source_point )
   return cluster_index;
 }
 
-inline bool DBScanClusterer::isWithinEpsilon( const Point &p1, const Point &p2 )
+inline bool DBScanClusterer::isWithinEpsilon( const Point &p1, const Point &p2 ) const
 { return d( p1, p2 ) <= epsilon_; }
 
 inline double DBScanClusterer::d( const Point &p1, const Point &p2 )

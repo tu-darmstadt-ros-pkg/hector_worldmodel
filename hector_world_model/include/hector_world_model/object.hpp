@@ -2,32 +2,27 @@
 #define HECTOR_WORLD_MODEL_OBJECT_HPP
 
 #include <Eigen/Geometry>
-#include <map>
-#include <memory>
-#include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/header.hpp>
-#include <string>
-#include <vector>
-
 #include <hector_perception_msgs/msg/object_detection2_d.hpp>
 #include <hector_worldmodel_msgs/msg/object3_d_detection.hpp>
+#include <map>
+#include <std_msgs/msg/header.hpp>
+#include <string>
 
 namespace hector_world_model
 {
-
 typedef Eigen::Transform<double, 3, Eigen::Affine> Transform3d;
 
 class ObjectDetection
 {
 public:
-  ObjectDetection( const hector_perception_msgs::msg::ObjectDetection2D &msg, int vis_marker_id )
+  ObjectDetection( const hector_perception_msgs::msg::ObjectDetection2D &msg, const int vis_marker_id )
       : header_( msg.header ), class_name_( msg.label ), detection_score_( msg.score ),
         projection_support_( 0.0 ), confidence_( 0.0 ), pose_( Transform3d::Identity() ),
         covariance_( Eigen::Matrix3f::Identity() ), vis_marker_id_( vis_marker_id )
   {
   }
 
-  ObjectDetection( const hector_worldmodel_msgs::msg::Object3DDetection &msg, int vis_marker_id )
+  ObjectDetection( const hector_worldmodel_msgs::msg::Object3DDetection &msg, const int vis_marker_id )
       : header_( msg.position.header ), class_name_( msg.class_name ),
         detection_score_( msg.detection_score ), projection_support_( msg.projection_support ),
         confidence_( msg.confidence ), pose_( Transform3d::Identity() ),
@@ -38,7 +33,7 @@ public:
     pose_.translation().z() = msg.position.point.z;
   }
 
-  ~ObjectDetection() noexcept { }
+  ~ObjectDetection() noexcept = default;
 
   void calculateConfidence() { confidence_ = detection_score_ * projection_support_; }
 
@@ -51,7 +46,7 @@ public:
   Eigen::Matrix3f covariance_;
   int vis_marker_id_;
   Eigen::Vector3d direction_; // Direction vector for the detection
-  double distance_;           // Distance to the detection
+  double distance_{};         // Distance to the detection
 };
 
 class ObjectCandidate
@@ -64,29 +59,29 @@ public:
   {
   }
 
-  ObjectCandidate() { }
-  ~ObjectCandidate() noexcept { }
+  ObjectCandidate() = default;
+
+  ~ObjectCandidate() noexcept = default;
 
   std_msgs::msg::Header header_;
   std::string class_name_;
-  double aggregated_confidence_;
+  double aggregated_confidence_{};
   Transform3d pose_;
   Eigen::Matrix3f covariance_;
-  int vis_marker_id_;
+  int vis_marker_id_{};
 };
 
 class Object
 {
-
 public:
-  Object( const ObjectCandidate &candidate, int vis_marker_id )
+  Object( const ObjectCandidate &candidate, const int vis_marker_id )
       : header_( candidate.header_ ), class_name_( candidate.class_name_ ),
         confidence_( candidate.aggregated_confidence_ ),
         intra_class_id_( class_counts_[candidate.class_name_]++ ), pose_( candidate.pose_ ),
         vis_marker_id_( vis_marker_id )
-  {
-  }
-  ~Object() noexcept { }
+  { confirmation_time_ = header_.stamp; }
+
+  ~Object() noexcept = default;
 
   static inline std::map<std::string, int> class_counts_;
 
@@ -96,8 +91,11 @@ public:
   int intra_class_id_;
   Transform3d pose_;
   int vis_marker_id_;
-};
+  builtin_interfaces::msg::Time confirmation_time_;
 
+  [[nodiscard]] builtin_interfaces::msg::Time getConfirmationTime() const
+  { return confirmation_time_; }
+};
 } // namespace hector_world_model
 
 #endif

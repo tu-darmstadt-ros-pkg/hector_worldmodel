@@ -9,8 +9,8 @@ void rm( std::vector<T> &vec, int index )
   vec.pop_back();
 }
 
-void assignClusters( std::vector<Eigen::Vector3d> &data, std::vector<Eigen::Vector3d> &centers,
-                     std::vector<int> &assignments )
+void assignClusters( const std::vector<Eigen::Vector3d> &data,
+                     const std::vector<Eigen::Vector3d> &centers, std::vector<int> &assignments )
 {
   for ( size_t i = 0; i < data.size(); ++i ) {
     double min_distance = std::numeric_limits<double>::max();
@@ -28,8 +28,8 @@ void assignClusters( std::vector<Eigen::Vector3d> &data, std::vector<Eigen::Vect
   }
 }
 
-void updateCenters( std::vector<Eigen::Vector3d> &data, std::vector<double> &weights,
-                    std::vector<Eigen::Vector3d> &centers, std::vector<int> &assignments )
+void updateCenters( const std::vector<Eigen::Vector3d> &data, const std::vector<double> &weights,
+                    std::vector<Eigen::Vector3d> &centers, const std::vector<int> &assignments )
 {
   std::vector<double> total_weight( centers.size(), 0 );
   centers.assign( centers.size(), Eigen::Vector3d::Zero() );
@@ -61,7 +61,7 @@ void aggregateCenterConfidences( std::vector<int> const &assignment,
 }
 
 hector_world_model::KMeansClusterer::KMeansClusterer( std::atomic<int> &latest_marker_id,
-                                                      std::shared_ptr<WorldModel> node )
+                                                      const std::shared_ptr<WorldModel> &node )
     : DetectionClusterer( latest_marker_id, node )
 {
 }
@@ -89,7 +89,7 @@ void hector_world_model::KMeansClusterer::processNewDetections()
       object_detections_.insert( object_detections_.begin(), detection );
     }
 
-    // std::sort( vedetection_queue_c.begin(), detection_queue_.end(), []( int a, int b ) { return a > b; } );
+    // std::sort( detection_queue_c.begin(), detection_queue_.end(), []( int a, int b ) { return a > b; } );
 
     pubVisualization( detection, true );
 
@@ -109,7 +109,7 @@ void hector_world_model::KMeansClusterer::processNewDetections()
 
     int center_idx = 0;
     for ( auto &object_candidate : object_candidates_ ) {
-      double candidate_distance =
+      const double candidate_distance =
           ( object_candidate.pose_.translation() - detection.pose_.translation() ).norm();
 
       // Find closest object candidate to new detection
@@ -125,7 +125,7 @@ void hector_world_model::KMeansClusterer::processNewDetections()
       addClusteringData( detection, closest_center_idx );
       // pubVisualization( detection, true );
     } else {
-      if ( detection.confidence_ >= initial_center_confidence_threshhold_ ) {
+      if ( detection.confidence_ >= initial_center_confidence_threshold_ ) {
         auto candidate = ObjectCandidate( detection, detection.vis_marker_id_ );
         object_candidates_.push_back( candidate );
         addClusteringData( detection, object_candidates_.size() - 1 );
@@ -157,7 +157,7 @@ void hector_world_model::KMeansClusterer::fit()
 
   new_detections_received_ = false;
 
-  // Copy current detections and their assinged candidates
+  // Copy current detections and their assigned candidates
   std::vector<Eigen::Vector3d> data = detection_locations_;
   std::vector<double> confidences = detection_confidences_;
   std::vector<int> assignments = assignments_;
@@ -167,27 +167,27 @@ void hector_world_model::KMeansClusterer::fit()
   // Run actual clustering algorithm
   weightedKMeans( data, confidences, centers, assignments );
 
-  // Collect object detections assinged to object candidates
-  std::vector<std::vector<int>> center_assingments( centers.size() );
+  // Collect object detections assigned to object candidates
+  std::vector<std::vector<int>> center_assignments( centers.size() );
   for ( size_t i = 0; i < assignments.size(); i++ ) {
-    center_assingments.at( assignments[i] ).push_back( i );
+    center_assignments.at( assignments[i] ).push_back( i );
   }
 
   // Aggregate confidences of assigned detections
   std::vector<double> center_confidences( centers.size(), 0.0 );
   aggregateCenterConfidences( assignments, confidences, center_confidences );
 
-  // Write back results to object candidates and new detection assingments
+  // Write back results to object candidates and new detection assignments
   processClusteringResults( assignments, center_confidences, centers );
 
-  // Check which object candidates have sufficient confidence and remove their assinged detections
-  promoteObjectCandidates( center_confidences, center_assingments );
+  // Check which object candidates have sufficient confidence and remove their assigned detections
+  promoteObjectCandidates( center_confidences, center_assignments );
 }
 
-void hector_world_model::KMeansClusterer::weightedKMeans( std::vector<Eigen::Vector3d> &data,
-                                                          std::vector<double> &weights,
+void hector_world_model::KMeansClusterer::weightedKMeans( const std::vector<Eigen::Vector3d> &data,
+                                                          const std::vector<double> &weights,
                                                           std::vector<Eigen::Vector3d> &centers,
-                                                          std::vector<int> &assignments )
+                                                          std::vector<int> &assignments ) const
 {
   for ( int k = 0; k < max_clustering_iterations_; k++ ) {
     assignClusters( data, centers, assignments );
@@ -196,7 +196,8 @@ void hector_world_model::KMeansClusterer::weightedKMeans( std::vector<Eigen::Vec
 }
 
 void hector_world_model::KMeansClusterer::promoteObjectCandidates(
-    std::vector<double> &candidate_confidences, std::vector<std::vector<int>> &center_assingments )
+    const std::vector<double> &candidate_confidences,
+    const std::vector<std::vector<int>> &center_assignments )
 {
   for ( size_t i = 0; i < candidate_confidences.size(); i++ ) {
     if ( candidate_confidences[i] > 0.5 ) {
@@ -207,7 +208,7 @@ void hector_world_model::KMeansClusterer::promoteObjectCandidates(
       pubVisualization( new_confirmed_obj, true );
 
       // Remove object detections assigned to candidate
-      removeAssingedDetections( center_assingments[i] );
+      removeAssignedDetections( center_assignments[i] );
 
       // Remove object candidate from candidates
       rm( object_candidates_, i );
@@ -215,7 +216,7 @@ void hector_world_model::KMeansClusterer::promoteObjectCandidates(
   }
 }
 
-void hector_world_model::KMeansClusterer::removeDetection( int detection_idx )
+void hector_world_model::KMeansClusterer::removeDetection( const int detection_idx )
 {
   rm( object_detections_, detection_idx );
   rm( detection_locations_, detection_idx );
@@ -223,8 +224,8 @@ void hector_world_model::KMeansClusterer::removeDetection( int detection_idx )
   rm( assignments_, detection_idx );
 }
 
-void hector_world_model::KMeansClusterer::removeAssingedDetections(
-    std::vector<int> &associated_detections )
+void hector_world_model::KMeansClusterer::removeAssignedDetections(
+    const std::vector<int> &associated_detections )
 {
   for ( size_t i = 0; i < associated_detections.size(); i++ ) {
     removeDetection( associated_detections[i] - i );

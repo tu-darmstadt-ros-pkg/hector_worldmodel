@@ -16,6 +16,7 @@ find_package(ament_cmake REQUIRED)
 
 # Define a list of dependencies in alphabetical order
 set(DEPENDENCIES
+    autonomy_manager_msgs
     hector_geotiff_plugin_interface
     hector_worldmodel_msgs
     hector_ros2_utils

@@ -2,6 +2,7 @@
 #include <QPainter>
 #include <hector_math/helpers/coloring.h>
 #include <hector_worldmodel_geotiff_plugin/worldmodel_plugin.hpp>
+#include <iomanip>
 
 namespace hector_worldmodel_geotiff_plugin
 {
@@ -32,8 +33,11 @@ void WorldmodelPlugin::initialize( const rclcpp::Node::SharedPtr &node )
                 for ( size_t i = 0; i < result->class_names.size(); i++ ) {
                   const auto &class_name = result->class_names.at( i );
                   const auto &position = result->positions.at( i );
+                  const auto &detection_time = result->detection_times.at( i );
+                  const auto &operation_mode = result->operation_modes.at( i );
 
-                  latest_object_list_.emplace_back( class_name, position );
+                  latest_object_list_.emplace_back( class_name, position, detection_time,
+                                                    operation_mode );
                 }
               } );
         } catch ( const std::exception &e ) {
@@ -52,7 +56,7 @@ void WorldmodelPlugin::draw(
   geotiff_ = geotiff_writer;
   auto qp = QPainter( &geotiff_->getImage() );
 
-  for ( const auto &[class_name, point] : latest_object_list_ ) {
+  for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
     const auto coords = Eigen::Vector2f{ point.point.x, point.point.y };
     Eigen::Vector2i geo_coords = geotiff_->transformWorldToGeoCoords( coords );
     drawTypeDependent( class_name, geo_coords, qp );
@@ -80,6 +84,29 @@ void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
     return;
   }
   RCLCPP_WARN( node_->get_logger(), "Unknown class name: %s", class_name.c_str() );
+}
+
+std::string
+WorldmodelPlugin::autonomyModeToString( const autonomy_manager_msgs::msg::AutonomyMode &mode )
+{
+  switch ( mode.autonomy_mode ) {
+  case 0:
+    return "UNKNOWN";
+  case 1:
+    return "TELEOPERATED";
+  case 2:
+    return "SEMI_AUTONOMOUS";
+  case 3:
+    return "AUTONOMOUS";
+  case 4:
+    return "INACTIVE";
+  case 5:
+    return "EMERGENCY_STOP_HARD";
+  case 6:
+    return "EMERGENCY_STOP_SOFT";
+  default:
+    return "UNKNOWN";
+  }
 }
 
 void WorldmodelPlugin::writeToTextfile()
@@ -116,7 +143,7 @@ void WorldmodelPlugin::writeToTextfile()
   file << info.mission << "\n";
 
   int idx = 0;
-  for ( const auto &[class_name, point] : latest_object_list_ ) {
+  for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
     file << idx++ << ", ";
 
     rclcpp::Time stamp( point.header.stamp );
@@ -128,7 +155,7 @@ void WorldmodelPlugin::writeToTextfile()
     file << pos.y << ", ";
     file << pos.z << ", ";
     file << node_->get_namespace() << ", ";
-    file << "A" << "\n";
+    file << autonomyModeToString( operation_mode ) << "\n";
   }
 }
 } // namespace hector_worldmodel_geotiff_plugin

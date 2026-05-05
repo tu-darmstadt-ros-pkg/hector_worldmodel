@@ -1,3 +1,5 @@
 ---
 string[] class_names
 geometry_msgs/PointStamped[] positions
+builtin_interfaces/Time[] detection_times
+autonomy_manager_msgs/AutonomyMode[] operation_modes
