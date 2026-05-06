@@ -1,0 +1,25 @@
+launch:
+  - arg:
+      name: "use_sim_time"
+      default: "false"
+  - arg:
+      name: use_bag_detections
+      default: "false"
+      description: "Use detections from a bag file instead of the world model"
+
+  - node:
+      pkg: hector_world_model
+      exec: world_model
+      name: "world_model"
+      output: "screen"
+      respawn: "true"
+      param:
+        - name: "use_sim_time"
+          value: "$(var use_sim_time)"
+        - name: "use_bag_detections"
+          value: "$(var use_bag_detections)"
+#      remap:
+#        - from: "get_confirmed_objects"
+#          to: "world_model/get_confirmed_objects"
+#        - from: "get_distance_to_obstacle"
+#          to: "world_model/get_distance_to_obstacle"

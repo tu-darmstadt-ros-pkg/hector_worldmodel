@@ -50,14 +50,14 @@ void WorldModel::setup()
 
   if ( !this->get_parameter( "use_bag_detections" ).get_value<bool>() ) {
     detection_subscriber_ = create_subscription<hector_perception_msgs::msg::ObjectDetection2DArray>(
-        std::string( this->get_namespace() ) + "/object_2D_detections", 10,
+        "object_2D_detections", 10,
         std::bind( &WorldModel::detectionCb, this, std::placeholders::_1 ), opts );
 
     detection_publisher_ = create_publisher<hector_worldmodel_msgs::msg::Object3DDetection>(
-        std::string( this->get_namespace() ) + "/object_3D_detections", 20 );
+        "object_3D_detections", 20 );
   } else {
     bag_subscriber_ = create_subscription<hector_worldmodel_msgs::msg::Object3DDetection>(
-        std::string( this->get_namespace() ) + "/object_3D_detections", 10,
+        "object_3D_detections", 10,
         [this]( const hector_worldmodel_msgs::msg::Object3DDetection &msg ) {
           setupNewClustererIfNeeded( msg.class_name );
 
@@ -67,32 +67,30 @@ void WorldModel::setup()
         opts );
   }
 
-  detection_marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(
-      std::string( this->get_namespace() ) + "/world_model_detection_markers", 20 );
-  candidate_marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(
-      std::string( this->get_namespace() ) + "/world_model_candidate_markers", 20 );
-  confirmed_marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(
-      std::string( this->get_namespace() ) + "/world_model_confirmed_markers", 20 );
+  detection_marker_pub_ =
+      create_publisher<visualization_msgs::msg::Marker>( "world_model_detection_markers", 20 );
+  candidate_marker_pub_ =
+      create_publisher<visualization_msgs::msg::Marker>( "world_model_candidate_markers", 20 );
+  confirmed_marker_pub_ =
+      create_publisher<visualization_msgs::msg::Marker>( "world_model_confirmed_markers", 20 );
 
   // Initialize autonomy mode subscription
   autonomy_mode_subscription_ = create_subscription<autonomy_manager_msgs::msg::AutonomyMode>(
-      "/autonomy_mode", rclcpp::QoS( 10 ).best_effort(),
+      "autonomy_mode", rclcpp::QoS( 10 ).transient_local(),
       std::bind( &WorldModel::autonomyModeCb, this, std::placeholders::_1 ) );
 
   // Set default autonomy mode
   current_autonomy_mode_.autonomy_mode = 0; // UNKNOWN
 
   get_confirmed_objects_srv_ = this->create_service<hector_worldmodel_msgs::srv::GetConfirmedObjects>(
-      std::string( this->get_namespace() ) + "/get_confirmed_objects",
-      std::bind( &WorldModel::getConfirmedObjectsCb, this, std::placeholders::_1,
-                 std::placeholders::_2 ) );
+      "get_confirmed_objects", std::bind( &WorldModel::getConfirmedObjectsCb, this,
+                                          std::placeholders::_1, std::placeholders::_2 ) );
 
   // ray_projection_clients_ = std::map<std::string, rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>>();
 
   distance_to_obstacle_client_ =
       this->create_client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>(
-          std::string( this->get_namespace() ) + "/get_distance_to_obstacle", rclcpp::QoS( 10 ),
-          detection_cb_group_ );
+          "get_distance_to_obstacle", rclcpp::QoS( 10 ), detection_cb_group_ );
 
   if ( !distance_to_obstacle_client_->wait_for_service( std::chrono::seconds( 5 ) ) ) {
     RCLCPP_ERROR( this->get_logger(), "Distance to obstacle service not available after waiting" );
@@ -128,8 +126,7 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
 
     ray_projection_clients_[msg.header.frame_id] =
         this->create_client<image_projection_msgs::srv::ProjectPixelTo3DRay>(
-            std::string( this->get_namespace() ) + "/" + service_topic + "/project_pixel_to_ray",
-            rclcpp::QoS( 10 ), detection_cb_group_ );
+            service_topic + "/project_pixel_to_ray", rclcpp::QoS( 10 ), detection_cb_group_ );
   }
 
   const auto ray_projection_client = ray_projection_clients_[msg.header.frame_id];
@@ -231,9 +228,8 @@ void WorldModel::timerCb()
   clustering_threads_.clear();
   clustering_threads_.reserve( clusterers_.size() );
 
-  for ( auto &clusterer : clusterers_ ) {
-    clustering_threads_.emplace_back(
-        std::thread{ [&c = clusterer.second]() { c->runClustering(); } } );
+  for ( auto &[class_name, clusterer] : clusterers_ ) {
+    clustering_threads_.emplace_back( [&c = clusterer]() { c->runClustering(); } );
   }
   for ( auto &thread : clustering_threads_ ) thread.join();
 
@@ -282,22 +278,24 @@ void WorldModel::getConfirmedObjectsCb(
     const hector_worldmodel_msgs::srv::GetConfirmedObjects::Request::SharedPtr &,
     const hector_worldmodel_msgs::srv::GetConfirmedObjects::Response::SharedPtr &response ) const
 {
-  for ( auto &cluster_entry : clusterers_ ) {
-    for ( const auto &confirmed_object : cluster_entry.second->getConfirmedObjects() ) {
+  for ( const auto &[class_name, clusterer] : clusterers_ ) {
+    for ( auto &confirmed_object : clusterer->getConfirmedObjects() ) {
       geometry_msgs::msg::PointStamped position;
       position.header = confirmed_object.header_;
       position.point.x = confirmed_object.pose_.translation().x();
       position.point.y = confirmed_object.pose_.translation().y();
       position.point.z = confirmed_object.pose_.translation().z();
 
-      response->class_names.push_back( cluster_entry.first );
+      response->class_names.push_back( class_name );
       response->positions.push_back( position );
       response->detection_times.push_back( confirmed_object.getConfirmationTime() );
 
       // Compute the autonomy mode that was active at confirmation time
-      autonomy_manager_msgs::msg::AutonomyMode mode_at_confirmation =
-          getAutonomyModeAtTime( confirmed_object.getConfirmationTime() );
-      response->operation_modes.push_back( mode_at_confirmation );
+      auto &mode = confirmed_object.getOperationMode();
+      if ( !mode.has_value() ) {
+        mode = getAutonomyModeAtTime( confirmed_object.getConfirmationTime() );
+      }
+      response->operation_modes.push_back( mode.value() );
     }
   }
 }

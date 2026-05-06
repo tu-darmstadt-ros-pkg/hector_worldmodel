@@ -202,7 +202,6 @@ void hector_world_model::KMeansClusterer::promoteObjectCandidates(
   for ( size_t i = 0; i < candidate_confidences.size(); i++ ) {
     if ( candidate_confidences[i] > 0.5 ) {
       // Move object candidate to confirmed objects
-
       auto new_confirmed_obj = Object( object_candidates_[i], latest_marker_id_++ );
       confirmed_objects_.push_back( new_confirmed_obj );
       pubVisualization( new_confirmed_obj, true );

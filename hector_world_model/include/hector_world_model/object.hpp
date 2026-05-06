@@ -2,9 +2,11 @@
 #define HECTOR_WORLD_MODEL_OBJECT_HPP
 
 #include <Eigen/Geometry>
+#include <autonomy_manager_msgs/msg/detail/autonomy_mode__builder.hpp>
 #include <hector_perception_msgs/msg/object_detection2_d.hpp>
 #include <hector_worldmodel_msgs/msg/object3_d_detection.hpp>
 #include <map>
+#include <optional>
 #include <std_msgs/msg/header.hpp>
 #include <string>
 
@@ -91,10 +93,16 @@ public:
   int intra_class_id_;
   Transform3d pose_;
   int vis_marker_id_;
-  builtin_interfaces::msg::Time confirmation_time_;
 
   [[nodiscard]] builtin_interfaces::msg::Time getConfirmationTime() const
   { return confirmation_time_; }
+
+  [[nodiscard]] std::optional<autonomy_manager_msgs::msg::AutonomyMode> &getOperationMode()
+  { return operation_mode_at_confirmation_; }
+
+private:
+  builtin_interfaces::msg::Time confirmation_time_;
+  std::optional<autonomy_manager_msgs::msg::AutonomyMode> operation_mode_at_confirmation_;
 };
 } // namespace hector_world_model
 

@@ -48,9 +48,10 @@ protected:
   pubPointMarker( double x, double y, double z, const int &marker_id, const int &color_idx,
                   const double &size, const bool &is_new,
                   const rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr &marker_pub );
-  void pubVisualization( const ObjectDetection &detection, bool is_new, bool was_dismissed = false );
-  void pubVisualization( const ObjectCandidate &candidate, bool is_new );
-  void pubVisualization( const Object &confirmed_obj, bool is_new );
+  void pubVisualization( const ObjectDetection &detection, bool is_new,
+                         bool was_dismissed = false ) const;
+  void pubVisualization( const ObjectCandidate &candidate, bool is_new ) const;
+  void pubVisualization( const Object &confirmed_obj, bool is_new ) const;
 
   double min_object_distance_;
   double confirmation_confidence_threshold_;

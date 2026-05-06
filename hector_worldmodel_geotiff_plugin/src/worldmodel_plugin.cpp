@@ -89,23 +89,33 @@ void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
 std::string
 WorldmodelPlugin::autonomyModeToString( const autonomy_manager_msgs::msg::AutonomyMode &mode )
 {
+  // How it should be done
+  // switch ( mode.autonomy_mode ) {
+  // case 0:
+  //   return "UNKNOWN";
+  // case 1:
+  //   return "TELEOPERATED";
+  // case 2:
+  //   return "SEMI_AUTONOMOUS";
+  // case 3:
+  //   return "AUTONOMOUS";
+  // case 4:
+  //   return "INACTIVE";
+  // case 5:
+  //   return "EMERGENCY_STOP_HARD";
+  // case 6:
+  //   return "EMERGENCY_STOP_SOFT";
+  // default:
+  //   return "UNKNOWN";
+  // }
+  // How we do it for RoboCup
   switch ( mode.autonomy_mode ) {
-  case 0:
-    return "UNKNOWN";
-  case 1:
-    return "TELEOPERATED";
-  case 2:
-    return "SEMI_AUTONOMOUS";
   case 3:
-    return "AUTONOMOUS";
-  case 4:
-    return "INACTIVE";
-  case 5:
-    return "EMERGENCY_STOP_HARD";
-  case 6:
-    return "EMERGENCY_STOP_SOFT";
+    return "A";
+  case 1:
+    return "T";
   default:
-    return "UNKNOWN";
+    return "A";
   }
 }
 

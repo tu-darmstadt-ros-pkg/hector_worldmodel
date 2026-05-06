@@ -58,7 +58,7 @@ bool hector_world_model::DetectionClusterer::closeToConfirmedObject(
 
 void hector_world_model::DetectionClusterer::pubVisualization( const ObjectDetection &detection,
                                                                const bool is_new,
-                                                               const bool was_dismissed )
+                                                               const bool was_dismissed ) const
 {
   if ( was_dismissed ) {
     pubPointMarker( detection.pose_.translation().x(), detection.pose_.translation().y(),
@@ -114,7 +114,7 @@ bool hector_world_model::DetectionClusterer::isRedundant( const ObjectDetection 
 }
 
 void hector_world_model::DetectionClusterer::pubVisualization( const ObjectCandidate &candidate,
-                                                               const bool is_new )
+                                                               const bool is_new ) const
 {
   pubPointMarker( candidate.pose_.translation().x(), candidate.pose_.translation().y(),
                   candidate.pose_.translation().z(), candidate.vis_marker_id_, 1, 0.075, is_new,
@@ -122,7 +122,7 @@ void hector_world_model::DetectionClusterer::pubVisualization( const ObjectCandi
 }
 
 void hector_world_model::DetectionClusterer::pubVisualization( const Object &confirmed_obj,
-                                                               const bool is_new )
+                                                               const bool is_new ) const
 {
   pubPointMarker( confirmed_obj.pose_.translation().x(), confirmed_obj.pose_.translation().y(),
                   confirmed_obj.pose_.translation().z(), confirmed_obj.vis_marker_id_, 3, 0.09,
