@@ -129,7 +129,7 @@ void WorldmodelPlugin::writeToTextfile()
     return;
   }
 
-  const std::string filename = exporter->getExportName( true ) + "_pois.csv";
+  const std::string filename = exporter->getExportName( true ) + "-pois.csv";
   const std::string total_path = path + "/" + filename;
 
   // Open the file in output mode with truncation
@@ -150,7 +150,7 @@ void WorldmodelPlugin::writeToTextfile()
        << "\n";
   file << hector_geotiff_plugin_interface::GeotiffExporterInterface::getTime( info.start_time, ":" )
        << "\n";
-  file << info.mission << "\n";
+  file << info.mission << " " << info.mission_counter_ << "\n";
 
   int idx = 0;
   for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
