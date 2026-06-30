@@ -33,6 +33,11 @@ void WorldModel::declareParameters()
   this->declare_parameter( "epsilon", 0.1 );
 
   this->declare_parameter( "use_bag_detections", false );
+
+  this->declare_parameter( "image_projection_service_front",
+                           "front_wideangle/image_projection_pinhole/project_pixel_to_ray" );
+  this->declare_parameter( "image_projection_service_back",
+                           "back_wideangle/image_projection_pinhole/project_pixel_to_ray" );
 }
 
 void WorldModel::setup()
@@ -119,14 +124,14 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
 {
   // If camera frame was not encountered before add new client
   if ( ray_projection_clients_.find( msg.header.frame_id ) == ray_projection_clients_.end() ) {
-    // /athena/front_wideangle/pinhole_front/image_rect_color or /athena/back_wideangle/pinhole_front/image_rect_color
     const bool is_front = msg.header.frame_id.find( "front" ) != std::string::npos;
-    const std::string service_topic =
-        is_front ? "image_projection_pinhole_front" : "image_projection_pinhole_back";
+    const std::string service_name =
+        is_front ? this->get_parameter( "image_projection_service_front" ).get_value<std::string>()
+                 : this->get_parameter( "image_projection_service_back" ).get_value<std::string>();
 
     ray_projection_clients_[msg.header.frame_id] =
         this->create_client<image_projection_msgs::srv::ProjectPixelTo3DRay>(
-            service_topic + "/project_pixel_to_ray", rclcpp::QoS( 10 ), detection_cb_group_ );
+            service_name, rclcpp::QoS( 10 ), detection_cb_group_ );
   }
 
   const auto ray_projection_client = ray_projection_clients_[msg.header.frame_id];
