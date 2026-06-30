@@ -31,6 +31,8 @@ public:
   void drawTypeDependent( const std::string &class_name, const Eigen::Vector2i &geo_coords,
                           QPainter &qp );
 
+  void reset() override;
+
 private:
   void writeToTextfile();
 
@@ -48,6 +50,8 @@ private:
 
   std::set<std::string> hazmat_classes_;
   std::set<std::string> object_classes_;
+
+  std::mutex mutex_;
 };
 } // namespace hector_worldmodel_geotiff_plugin
 

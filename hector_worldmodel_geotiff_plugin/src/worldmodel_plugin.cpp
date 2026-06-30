@@ -49,6 +49,12 @@ void WorldmodelPlugin::initialize( const rclcpp::Node::SharedPtr &node )
 
 std::string WorldmodelPlugin::getPluginName() { return "worldmodel_plugin"; }
 
+void WorldmodelPlugin::reset()
+{
+  std::lock_guard<std::mutex> lock( mutex_ );
+  latest_object_list_.clear();
+}
+
 void WorldmodelPlugin::draw(
     const std::shared_ptr<hector_geotiff_plugin_interface::GeotiffWriterInterface> geotiff_writer )
 {
