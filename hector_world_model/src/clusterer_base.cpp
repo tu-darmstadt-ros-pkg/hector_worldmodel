@@ -24,9 +24,16 @@ hector_world_model::DetectionClusterer::DetectionClusterer( std::atomic<int> &la
 
 void hector_world_model::DetectionClusterer::reset()
 {
+  {
+    std::lock_guard<std::mutex> lock( detection_queue_mutex_ );
+    detection_queue_.clear();
+  }
+  {
+    std::lock_guard<std::mutex> lock( confirmed_objects_mutex_ );
+    confirmed_objects_.clear();
+  }
   object_detections_.clear();
   object_candidates_.clear();
-  confirmed_objects_.clear();
 }
 
 std::vector<hector_world_model::Object> hector_world_model::DetectionClusterer::getConfirmedObjects()

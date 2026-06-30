@@ -15,6 +15,7 @@
 #include <hector_worldmodel_msgs/srv/get_confirmed_objects.hpp>
 #include <hector_worldmodel_msgs/srv/get_distance_to_obstacle.hpp>
 #include <image_projection_msgs/srv/project_pixel_to3_d_ray.hpp>
+#include <std_srvs/srv/trigger.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
 #include <hector_world_model/object.hpp>
@@ -58,10 +59,14 @@ private:
       const hector_worldmodel_msgs::srv::GetConfirmedObjects::Request::SharedPtr &request,
       const hector_worldmodel_msgs::srv::GetConfirmedObjects::Response::SharedPtr &response ) const;
 
+  void resetCb( const std_srvs::srv::Trigger::Request::SharedPtr &request,
+                const std_srvs::srv::Trigger::Response::SharedPtr &response );
+
   rclcpp::CallbackGroup::SharedPtr clustering_timer_group_;
   rclcpp::CallbackGroup::SharedPtr detection_cb_group_;
 
   rclcpp::Service<hector_worldmodel_msgs::srv::GetConfirmedObjects>::SharedPtr get_confirmed_objects_srv_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_srv_;
 
   std::map<std::string, std::unique_ptr<DBScanClusterer>> clusterers_;
   std::mutex cluster_mutex_;

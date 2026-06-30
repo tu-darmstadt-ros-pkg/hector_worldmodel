@@ -91,6 +91,10 @@ void WorldModel::setup()
       "get_confirmed_objects", std::bind( &WorldModel::getConfirmedObjectsCb, this,
                                           std::placeholders::_1, std::placeholders::_2 ) );
 
+  reset_srv_ = this->create_service<std_srvs::srv::Trigger>(
+      "~/reset",
+      std::bind( &WorldModel::resetCb, this, std::placeholders::_1, std::placeholders::_2 ) );
+
   // ray_projection_clients_ = std::map<std::string, rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>>();
 
   distance_to_obstacle_client_ =
@@ -277,6 +281,21 @@ WorldModel::getAutonomyModeAtTime( const builtin_interfaces::msg::Time &timestam
   }
 
   return result;
+}
+
+void WorldModel::resetCb( const std_srvs::srv::Trigger::Request::SharedPtr &,
+                          const std_srvs::srv::Trigger::Response::SharedPtr &response )
+{
+  std::lock_guard<std::mutex> lock( cluster_mutex_ );
+  for ( auto &[class_name, clusterer] : clusterers_ ) { clusterer->reset(); }
+  latest_marker_id_ = 0;
+  {
+    std::lock_guard<std::mutex> history_lock( autonomy_mode_history_mutex_ );
+    autonomy_mode_history_.clear();
+  }
+  RCLCPP_INFO( this->get_logger(), "World model reset." );
+  response->success = true;
+  response->message = "World model reset successfully.";
 }
 
 void WorldModel::getConfirmedObjectsCb(

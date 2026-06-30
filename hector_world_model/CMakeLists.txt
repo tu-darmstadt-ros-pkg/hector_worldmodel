@@ -18,6 +18,7 @@ find_package(OpenCV REQUIRED)
 find_package(hector_perception_msgs REQUIRED)
 find_package(hector_worldmodel_msgs REQUIRED)
 find_package(image_projection_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 add_executable(world_model src/world_model.cpp src/clusterer_base.cpp
@@ -43,6 +44,7 @@ ament_target_dependencies(
   hector_worldmodel_msgs
   hector_perception_msgs
   image_projection_msgs
+  std_srvs
   visualization_msgs)
 
 install(TARGETS world_model DESTINATION lib/${PROJECT_NAME})
