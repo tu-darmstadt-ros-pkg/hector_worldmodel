@@ -170,6 +170,12 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
           dist_request->point.point.y = result->ray.point.y;
           dist_request->point.point.z = result->ray.point.z;
 
+          if ( detected_obj->header_.frame_id == "pinhole_front_optical_frame" ) {
+            dist_request->point.header.frame_id = "front_wideangle_optical_frame";
+          } else {
+            dist_request->point.header.frame_id = "back_wideangle_optical_frame";
+          }
+
           /*
           // Check if topic is namespaced
           if ( "/" + frame_name.substr( 0, frame_name.find( "/" ) ) == std::string( this->get_namespace() ) )
