@@ -5,13 +5,12 @@
 
 namespace hector_world_model
 {
-
 class KMeansClusterer : public DetectionClusterer
 {
 public:
-  KMeansClusterer( std::atomic<int> &latest_marker_id, std::shared_ptr<WorldModel> node );
+  KMeansClusterer( std::atomic<int> &latest_marker_id, const std::shared_ptr<WorldModel> &node );
 
-  ~KMeansClusterer() noexcept { };
+  ~KMeansClusterer() noexcept override = default;
 
 private:
   void fit() override;
@@ -19,17 +18,17 @@ private:
 
   void addClusteringData( const ObjectDetection &detection, int associated_center_idx );
 
-  void weightedKMeans( std::vector<Eigen::Vector3d> &data, std::vector<double> &weights,
-                       std::vector<Eigen::Vector3d> &centers, std::vector<int> &assignments );
+  void weightedKMeans( const std::vector<Eigen::Vector3d> &data, const std::vector<double> &weights,
+                       std::vector<Eigen::Vector3d> &centers, std::vector<int> &assignments ) const;
 
   void processClusteringResults( std::vector<int> const &assignments,
                                  std::vector<double> const &new_confidences,
                                  std::vector<Eigen::Vector3d> const &new_centers );
 
-  void promoteObjectCandidates( std::vector<double> &candidate_confidences,
-                                std::vector<std::vector<int>> &center_assingments );
+  void promoteObjectCandidates( const std::vector<double> &candidate_confidences,
+                                const std::vector<std::vector<int>> &center_assignments );
 
-  void removeAssingedDetections( std::vector<int> &associated_detections );
+  void removeAssignedDetections( const std::vector<int> &associated_detections );
 
   void removeDetection( int detection_idx );
 
@@ -42,7 +41,6 @@ private:
   std::vector<Eigen::Vector3d> detection_locations_;
   std::vector<double> detection_confidences_;
 };
-
 } // namespace hector_world_model
 
 #endif

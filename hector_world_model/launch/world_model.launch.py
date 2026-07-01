@@ -23,7 +23,7 @@ def generate_launch_description():
             Node(
                 package="hector_world_model",
                 executable="world_model",
-                name="world_model_node",
+                name="world_model",
                 prefix=["gdbserver localhost:3000"],
                 output="screen",
                 parameters=[

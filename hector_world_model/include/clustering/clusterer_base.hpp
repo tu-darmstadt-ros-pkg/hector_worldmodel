@@ -1,30 +1,25 @@
 #ifndef HECTOR_WORLD_MODEL_CLUSTERER_BASE_HPP
 #define HECTOR_WORLD_MODEL_CLUSTERER_BASE_HPP
 
-#include <memory>
-#include <string>
-#include <vector>
-
-#include <Eigen/Geometry>
 #include <hector_world_model/object.hpp>
+#include <memory>
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/header.hpp>
+#include <vector>
 #include <visualization_msgs/msg/marker.hpp>
 
 namespace hector_world_model
 {
-
 class WorldModel;
 
 class DetectionClusterer
 {
 public:
-  DetectionClusterer( std::atomic<int> &latest_marker_id, std::shared_ptr<WorldModel> node );
+  DetectionClusterer( std::atomic<int> &latest_marker_id, const std::shared_ptr<WorldModel> &node );
 
-  ~DetectionClusterer() noexcept { };
+  virtual ~DetectionClusterer() noexcept = default;
 
   // Add a new detection to be collected for the next clustering run
-  void virtual addDetection( std::shared_ptr<ObjectDetection> detection );
+  void virtual addDetection( const std::shared_ptr<ObjectDetection> &detection );
 
   void runClustering()
   {
@@ -37,32 +32,34 @@ public:
   std::vector<Object> getConfirmedObjects();
 
 protected:
-  bool redundancy_criterion( const hector_world_model::ObjectDetection &d1,
-                             const hector_world_model::ObjectDetection &d2 );
+  [[nodiscard]] bool redundancy_criterion( const ObjectDetection &d1,
+                                           const ObjectDetection &d2 ) const;
 
   // Run actual clustering algorithm
   virtual void fit() = 0;
-  // Process new detections, add relevant non redundant detections to clustering pool
+  // Process new detections, add relevant non-redundant detections to clustering pool
   virtual void processNewDetections() = 0;
 
   bool isRedundant( const ObjectDetection &new_detection );
 
-  bool closeToConfirmedObject( const ObjectDetection &new_detection );
+  [[nodiscard]] bool closeToConfirmedObject( const ObjectDetection &new_detection ) const;
 
-  void pubPointMarker( const double x, const double y, const double z, const int &marker_id,
-                       const int &color_idx, const double &size, const bool &is_new,
-                       rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub );
-  void pubVisualization( const ObjectDetection &detection, bool is_new, bool was_dismissed = false );
-  void pubVisualization( const ObjectCandidate &candidate, bool is_new );
-  void pubVisualization( const Object &confirmed_obj, bool is_new );
+  static void
+  pubPointMarker( double x, double y, double z, const int &marker_id, const int &color_idx,
+                  const double &size, const bool &is_new,
+                  const rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr &marker_pub );
+  void pubVisualization( const ObjectDetection &detection, bool is_new,
+                         bool was_dismissed = false ) const;
+  void pubVisualization( const ObjectCandidate &candidate, bool is_new ) const;
+  void pubVisualization( const Object &confirmed_obj, bool is_new ) const;
 
   double min_object_distance_;
-  double confirmation_confidence_threshhold_;
-  double initial_center_confidence_threshhold_;
+  double confirmation_confidence_threshold_;
+  double initial_center_confidence_threshold_;
 
-  double redundancy_endpoint_distance_threshhold_;
-  double redundancy_endpoint_angle_threshhold_;
-  double redundancy_distance_threshhold_;
+  double redundancy_endpoint_distance_threshold_;
+  double redundancy_endpoint_angle_threshold_;
+  double redundancy_distance_threshold_;
 
   int max_clustering_iterations_;
 
@@ -82,7 +79,6 @@ protected:
 
   std::weak_ptr<WorldModel> node_;
 };
-
 } // namespace hector_world_model
 
 #endif

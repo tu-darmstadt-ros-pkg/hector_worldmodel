@@ -2,10 +2,10 @@
 #include <QPainter>
 #include <hector_math/helpers/coloring.h>
 #include <hector_worldmodel_geotiff_plugin/worldmodel_plugin.hpp>
+#include <iomanip>
 
 namespace hector_worldmodel_geotiff_plugin
 {
-
 void WorldmodelPlugin::initialize( const rclcpp::Node::SharedPtr &node )
 {
   node_ = node;
@@ -28,16 +28,18 @@ void WorldmodelPlugin::initialize( const rclcpp::Node::SharedPtr &node )
               request,
               [this]( rclcpp::Client<hector_worldmodel_msgs::srv::GetConfirmedObjects>::SharedFuture
                           response ) {
-                auto result = response.get();
+                const auto &result = response.get();
                 latest_object_list_.clear();
                 for ( size_t i = 0; i < result->class_names.size(); i++ ) {
                   const auto &class_name = result->class_names.at( i );
                   const auto &position = result->positions.at( i );
+                  const auto &detection_time = result->detection_times.at( i );
+                  const auto &operation_mode = result->operation_modes.at( i );
 
-                  latest_object_list_.emplace_back( class_name, position );
+                  latest_object_list_.emplace_back( class_name, position, detection_time,
+                                                    operation_mode );
                 }
               } );
-
         } catch ( const std::exception &e ) {
           RCLCPP_WARN( node_->get_logger(), "Error while drawing confirmed objects: %s", e.what() );
         }
@@ -47,22 +49,26 @@ void WorldmodelPlugin::initialize( const rclcpp::Node::SharedPtr &node )
 
 std::string WorldmodelPlugin::getPluginName() { return "worldmodel_plugin"; }
 
-void WorldmodelPlugin::draw(
-    std::shared_ptr<hector_geotiff_plugin_interface::GeotiffWriterInterface> geotiff )
+void WorldmodelPlugin::reset()
 {
-  RCLCPP_INFO_STREAM( node_->get_logger(), "Drawing Plugin: " << getPluginName() );
-  geotiff_ = geotiff;
-  QPainter qp = QPainter( &geotiff_->getImage() );
+  std::lock_guard<std::mutex> lock( mutex_ );
+  latest_object_list_.clear();
+}
 
-  for ( const auto &confirmed_object : latest_object_list_ ) {
-    const auto &class_name = confirmed_object.first;
+void WorldmodelPlugin::draw(
+    const std::shared_ptr<hector_geotiff_plugin_interface::GeotiffWriterInterface> geotiff_writer )
+{
+  RCLCPP_DEBUG_STREAM( node_->get_logger(), "Drawing Plugin: " << getPluginName() );
+  geotiff_ = geotiff_writer;
+  auto qp = QPainter( &geotiff_->getImage() );
 
-    const auto coords =
-        Eigen::Vector2f{ confirmed_object.second.point.x, confirmed_object.second.point.y };
-
+  for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
+    const auto coords = Eigen::Vector2f{ point.point.x, point.point.y };
     Eigen::Vector2i geo_coords = geotiff_->transformWorldToGeoCoords( coords );
-
     drawTypeDependent( class_name, geo_coords, qp );
+  }
+  if ( !latest_object_list_.empty() ) {
+    writeToTextfile();
   }
 }
 
@@ -84,48 +90,90 @@ void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
     return;
   }
   RCLCPP_WARN( node_->get_logger(), "Unknown class name: %s", class_name.c_str() );
-  writeToTextfile();
+}
+
+std::string
+WorldmodelPlugin::autonomyModeToString( const autonomy_manager_msgs::msg::AutonomyMode &mode )
+{
+  // How it should be done
+  // switch ( mode.autonomy_mode ) {
+  // case 0:
+  //   return "UNKNOWN";
+  // case 1:
+  //   return "TELEOPERATED";
+  // case 2:
+  //   return "SEMI_AUTONOMOUS";
+  // case 3:
+  //   return "AUTONOMOUS";
+  // case 4:
+  //   return "INACTIVE";
+  // case 5:
+  //   return "EMERGENCY_STOP_HARD";
+  // case 6:
+  //   return "EMERGENCY_STOP_SOFT";
+  // default:
+  //   return "UNKNOWN";
+  // }
+  // How we do it for RoboCup
+  switch ( mode.autonomy_mode ) {
+  case 3:
+    return "A";
+  case 1:
+    return "T";
+  default:
+    return "A";
+  }
 }
 
 void WorldmodelPlugin::writeToTextfile()
 {
-  const std::string filename = "~/hector/RoboCup2025-Hector-Labyrinth-SemiFinals-17:00-pois.csv";
+  auto exporter = geotiff_->getExporter();
+  std::string path;
+  if ( !exporter || !exporter->getExportPath( geotiff_->isAutosave(), path ) ) {
+    RCLCPP_WARN( node_->get_logger(),
+                 "Could not get export path for geotiff, cannot save maze objects to text file" );
+    return;
+  }
+
+  const std::string filename = exporter->getExportName( true ) + "-pois.csv";
+  const std::string total_path = path + "/" + filename;
 
   // Open the file in output mode with truncation
-  std::ofstream file( filename, std::ios::out | std::ios::trunc );
-
+  std::ofstream file( total_path, std::ios::out | std::ios::trunc );
   if ( !file ) {
     RCLCPP_WARN( node_->get_logger(), "Could not open text file %s to save maze objects",
                  filename.c_str() );
     return;
   }
 
+  auto info = exporter->getExportInfo();
   // Write to the file
   file << "pois\n";
   file << "1.3\n";
-  file << "Hector\n";
-  file << "Germany\n";
-  file << "2025-07-19\n";
-  file << "17:00\n";
-  file << "SemiFinals\n";
+  file << info.team << "\n";
+  file << info.country << "\n";
+  file << hector_geotiff_plugin_interface::GeotiffExporterInterface::getDate( info.start_time, "-" )
+       << "\n";
+  file << hector_geotiff_plugin_interface::GeotiffExporterInterface::getTime( info.start_time, ":" )
+       << "\n";
+  file << info.mission << " " << info.mission_counter_ << "\n";
 
   int idx = 0;
-  for ( const auto &confirmed_object : latest_object_list_ ) {
+  for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
     file << idx++ << ", ";
 
-    rclcpp::Time stamp( confirmed_object.second.header.stamp );
-    std::time_t time_t_stamp = static_cast<time_t>( stamp.seconds() );
+    rclcpp::Time stamp( point.header.stamp );
+    auto time_t_stamp = static_cast<time_t>( stamp.seconds() );
     file << std::put_time( std::gmtime( &time_t_stamp ), "%H:%M:%S" ) << ", ";
 
-    const auto pos = confirmed_object.second.point;
+    const auto pos = point.point;
     file << pos.x << ", ";
     file << pos.y << ", ";
     file << pos.z << ", ";
     file << node_->get_namespace() << ", ";
-    file << "exploration" << "\n";
+    file << autonomyModeToString( operation_mode ) << "\n";
   }
 }
-
 } // namespace hector_worldmodel_geotiff_plugin
 
 #include <pluginlib/class_list_macros.hpp>

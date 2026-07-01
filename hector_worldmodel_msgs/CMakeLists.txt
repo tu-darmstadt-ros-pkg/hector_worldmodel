@@ -3,11 +3,17 @@ project(hector_worldmodel_msgs)
 
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(autonomy_manager_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 rosidl_generate_interfaces(
-  ${PROJECT_NAME} srv/GetDistanceToObstacle.srv srv/GetConfirmedObjects.srv
-  msg/Object3DDetection.msg DEPENDENCIES geometry_msgs)
+  ${PROJECT_NAME}
+  srv/GetDistanceToObstacle.srv
+  srv/GetConfirmedObjects.srv
+  msg/Object3DDetection.msg
+  DEPENDENCIES
+  autonomy_manager_msgs
+  geometry_msgs)
 
 ament_export_dependencies(rosidl_default_runtime)
 

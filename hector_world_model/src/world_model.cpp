@@ -6,7 +6,6 @@
 
 namespace hector_world_model
 {
-
 WorldModel::WorldModel() : Node( "world_model" ) { setup(); }
 
 WorldModel::~WorldModel()
@@ -16,26 +15,29 @@ WorldModel::~WorldModel()
       t.join();
     }
   }
-
   RCLCPP_INFO( this->get_logger(), "All processing threads joined." );
 }
 
 void WorldModel::declareParameters()
 {
-
-  this->declare_parameter( "distance_threshhold", 0.4 );
-  this->declare_parameter( "confirmation_confidence_threshhold", 0.85 );
-  this->declare_parameter( "initial_center_confidence_threshhold", 0.6 );
+  this->declare_parameter( "distance_threshold", 0.4 );
+  this->declare_parameter( "confirmation_confidence_threshold", 0.85 );
+  this->declare_parameter( "initial_center_confidence_threshold", 0.6 );
   this->declare_parameter( "max_clustering_iterations", 8 );
 
-  this->declare_parameter( "redundancy_endpoint_distance_threshhold", 0.05 );
-  this->declare_parameter( "redundancy_endpoint_angle_threshhold", 10.0 );
-  this->declare_parameter( "redundancy_distance_threshhold", 0.2 );
+  this->declare_parameter( "redundancy_endpoint_distance_threshold", 0.05 );
+  this->declare_parameter( "redundancy_endpoint_angle_threshold", 10.0 );
+  this->declare_parameter( "redundancy_distance_threshold", 0.2 );
 
   this->declare_parameter( "min_neighbours", 3 );
   this->declare_parameter( "epsilon", 0.1 );
 
   this->declare_parameter( "use_bag_detections", false );
+
+  this->declare_parameter( "image_projection_service_front",
+                           "front_wideangle/image_projection_pinhole/project_pixel_to_ray" );
+  this->declare_parameter( "image_projection_service_back",
+                           "back_wideangle/image_projection_pinhole/project_pixel_to_ray" );
 }
 
 void WorldModel::setup()
@@ -51,18 +53,16 @@ void WorldModel::setup()
   rclcpp::SubscriptionOptions opts;
   opts.callback_group = detection_cb_group_;
 
-  bool use_bag_detections = this->get_parameter( "use_bag_detections" ).get_value<bool>();
-  if ( !use_bag_detections ) {
+  if ( !this->get_parameter( "use_bag_detections" ).get_value<bool>() ) {
     detection_subscriber_ = create_subscription<hector_perception_msgs::msg::ObjectDetection2DArray>(
-        std::string( this->get_namespace() ) + "/object_2D_detections", 10,
+        "object_2D_detections", 10,
         std::bind( &WorldModel::detectionCb, this, std::placeholders::_1 ), opts );
 
     detection_publisher_ = create_publisher<hector_worldmodel_msgs::msg::Object3DDetection>(
-        std::string( this->get_namespace() ) + "/object_3D_detections", 20 );
+        "object_3D_detections", 20 );
   } else {
-
     bag_subscriber_ = create_subscription<hector_worldmodel_msgs::msg::Object3DDetection>(
-        std::string( this->get_namespace() ) + "/object_3D_detections", 10,
+        "object_3D_detections", 10,
         [this]( const hector_worldmodel_msgs::msg::Object3DDetection &msg ) {
           setupNewClustererIfNeeded( msg.class_name );
 
@@ -72,24 +72,34 @@ void WorldModel::setup()
         opts );
   }
 
-  detection_marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(
-      std::string( this->get_namespace() ) + "/world_model_detection_markers", 20 );
-  candidate_marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(
-      std::string( this->get_namespace() ) + "/world_model_candidate_markers", 20 );
-  confirmed_marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(
-      std::string( this->get_namespace() ) + "/world_model_confirmed_markers", 20 );
+  detection_marker_pub_ =
+      create_publisher<visualization_msgs::msg::Marker>( "world_model_detection_markers", 20 );
+  candidate_marker_pub_ =
+      create_publisher<visualization_msgs::msg::Marker>( "world_model_candidate_markers", 20 );
+  confirmed_marker_pub_ =
+      create_publisher<visualization_msgs::msg::Marker>( "world_model_confirmed_markers", 20 );
+
+  // Initialize autonomy mode subscription
+  autonomy_mode_subscription_ = create_subscription<autonomy_manager_msgs::msg::AutonomyMode>(
+      "autonomy_mode", rclcpp::QoS( 10 ).transient_local(),
+      std::bind( &WorldModel::autonomyModeCb, this, std::placeholders::_1 ) );
+
+  // Set default autonomy mode
+  current_autonomy_mode_.autonomy_mode = 0; // UNKNOWN
 
   get_confirmed_objects_srv_ = this->create_service<hector_worldmodel_msgs::srv::GetConfirmedObjects>(
-      std::string( this->get_namespace() ) + "/get_confirmed_objects",
-      std::bind( &WorldModel::getConfirmedObjectsCb, this, std::placeholders::_1,
-                 std::placeholders::_2 ) );
+      "get_confirmed_objects", std::bind( &WorldModel::getConfirmedObjectsCb, this,
+                                          std::placeholders::_1, std::placeholders::_2 ) );
+
+  reset_srv_ = this->create_service<std_srvs::srv::Trigger>(
+      "~/reset",
+      std::bind( &WorldModel::resetCb, this, std::placeholders::_1, std::placeholders::_2 ) );
 
   // ray_projection_clients_ = std::map<std::string, rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>>();
 
   distance_to_obstacle_client_ =
       this->create_client<hector_worldmodel_msgs::srv::GetDistanceToObstacle>(
-          std::string( this->get_namespace() ) + "/get_distance_to_obstacle", rclcpp::QoS( 10 ),
-          detection_cb_group_ );
+          "get_distance_to_obstacle", rclcpp::QoS( 10 ), detection_cb_group_ );
 
   if ( !distance_to_obstacle_client_->wait_for_service( std::chrono::seconds( 5 ) ) ) {
     RCLCPP_ERROR( this->get_logger(), "Distance to obstacle service not available after waiting" );
@@ -118,16 +128,14 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
 {
   // If camera frame was not encountered before add new client
   if ( ray_projection_clients_.find( msg.header.frame_id ) == ray_projection_clients_.end() ) {
-
-    // /athena/front_wideangle/pinhole_front/image_rect_color or /athena/back_wideangle/pinhole_front/image_rect_color
-    bool is_front = msg.header.frame_id.find( "front" ) != std::string::npos;
-    std::string service_topic =
-        is_front ? "image_projection_pinhole_front" : "image_projection_pinhole_back";
+    const bool is_front = msg.header.frame_id.find( "front" ) != std::string::npos;
+    const std::string service_name =
+        is_front ? this->get_parameter( "image_projection_service_front" ).get_value<std::string>()
+                 : this->get_parameter( "image_projection_service_back" ).get_value<std::string>();
 
     ray_projection_clients_[msg.header.frame_id] =
         this->create_client<image_projection_msgs::srv::ProjectPixelTo3DRay>(
-            std::string( this->get_namespace() ) + "/" + service_topic + "/project_pixel_to_ray",
-            rclcpp::QoS( 10 ), detection_cb_group_ );
+            service_name, rclcpp::QoS( 10 ), detection_cb_group_ );
   }
 
   const auto ray_projection_client = ray_projection_clients_[msg.header.frame_id];
@@ -135,11 +143,11 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
   for ( const hector_perception_msgs::msg::ObjectDetection2D &single_detection : msg.detections ) {
     auto detected_obj = std::make_shared<ObjectDetection>( single_detection, latest_marker_id_++ );
 
-    auto request = std::make_shared<image_projection_msgs::srv::ProjectPixelTo3DRay::Request>();
+    const auto request = std::make_shared<image_projection_msgs::srv::ProjectPixelTo3DRay::Request>();
 
     request->pixel.header = msg.header;
 
-    auto bb = single_detection.bounding_box;
+    const auto bb = single_detection.bounding_box;
     request->pixel.point.y = ( bb.bottom - bb.top ) / 2 + bb.top;
     request->pixel.point.x = ( bb.right - bb.left ) / 2 + bb.left;
 
@@ -147,15 +155,14 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
         request,
         [this, detected_obj](
             rclcpp::Client<image_projection_msgs::srv::ProjectPixelTo3DRay>::SharedFuture response ) {
-          auto result = response.get();
-
-          auto dist_request =
+          const auto &result = response.get();
+          const auto dist_request =
               std::make_shared<hector_worldmodel_msgs::srv::GetDistanceToObstacle::Request>();
 
           // Workaround for simulation, image_projection does not use sim_time
           dist_request->point.header = detected_obj->header_;
 
-          RCLCPP_INFO( this->get_logger(), "Dist request time: %u.%u. Current time: %u.%u",
+          RCLCPP_INFO( this->get_logger(), "Dist request time: %u.%u. Current time: %f.%ld",
                        dist_request->point.header.stamp.sec, dist_request->point.header.stamp.nanosec,
                        this->now().seconds(), this->now().nanoseconds() );
 
@@ -208,7 +215,7 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
   }
 }
 
-void WorldModel::pub3DDetection( const ObjectDetection &obj_detection )
+void WorldModel::pub3DDetection( const ObjectDetection &obj_detection ) const
 {
   hector_worldmodel_msgs::msg::Object3DDetection msg;
   msg.position.header = obj_detection.header_;
@@ -230,42 +237,98 @@ void WorldModel::timerCb()
   clustering_threads_.clear();
   clustering_threads_.reserve( clusterers_.size() );
 
-  for ( auto &clusterer : clusterers_ ) {
-    clustering_threads_.emplace_back(
-        std::thread{ [&c = clusterer.second]() { c->runClustering(); } } );
+  for ( auto &[class_name, clusterer] : clusterers_ ) {
+    clustering_threads_.emplace_back( [&c = clusterer]() { c->runClustering(); } );
   }
   for ( auto &thread : clustering_threads_ ) thread.join();
 
   clustering_timer_->reset();
 }
 
-void WorldModel::getConfirmedObjectsCb(
-    const hector_worldmodel_msgs::srv::GetConfirmedObjects::Request::SharedPtr request,
-    hector_worldmodel_msgs::srv::GetConfirmedObjects::Response::SharedPtr response )
+void WorldModel::autonomyModeCb( const autonomy_manager_msgs::msg::AutonomyMode::SharedPtr msg )
 {
+  // Only add to history if mode has changed
+  if ( current_autonomy_mode_.autonomy_mode != msg->autonomy_mode ) {
+    std::lock_guard<std::mutex> lock( autonomy_mode_history_mutex_ );
+    autonomy_mode_history_.emplace_back( this->now(), *msg );
+    current_autonomy_mode_ = *msg;
+  }
+}
 
-  for ( auto &cluster_entry : clusterers_ ) {
+autonomy_manager_msgs::msg::AutonomyMode
+WorldModel::getAutonomyModeAtTime( const builtin_interfaces::msg::Time &timestamp ) const
+{
+  std::lock_guard<std::mutex> lock( autonomy_mode_history_mutex_ );
 
-    for ( const auto &confirmed_object : cluster_entry.second->getConfirmedObjects() ) {
+  // Convert timestamp to rclcpp::Time for comparison
+  const rclcpp::Time target_time( timestamp );
 
+  // If no history, return current mode (most recent)
+  if ( autonomy_mode_history_.empty() ) {
+    return current_autonomy_mode_;
+  }
+
+  // Find the mode that was active at the given timestamp
+  // Search for the last mode change that occurred before or at the target time
+  autonomy_manager_msgs::msg::AutonomyMode result = autonomy_mode_history_[0].second;
+
+  for ( const auto &[change_time, mode] : autonomy_mode_history_ ) {
+    if ( change_time <= target_time ) {
+      result = mode;
+    } else {
+      break; // No need to check further
+    }
+  }
+
+  return result;
+}
+
+void WorldModel::resetCb( const std_srvs::srv::Trigger::Request::SharedPtr &,
+                          const std_srvs::srv::Trigger::Response::SharedPtr &response )
+{
+  std::lock_guard<std::mutex> lock( cluster_mutex_ );
+  for ( auto &[class_name, clusterer] : clusterers_ ) { clusterer->reset(); }
+  latest_marker_id_ = 0;
+  {
+    std::lock_guard<std::mutex> history_lock( autonomy_mode_history_mutex_ );
+    autonomy_mode_history_.clear();
+  }
+  RCLCPP_INFO( this->get_logger(), "World model reset." );
+  response->success = true;
+  response->message = "World model reset successfully.";
+}
+
+void WorldModel::getConfirmedObjectsCb(
+    const hector_worldmodel_msgs::srv::GetConfirmedObjects::Request::SharedPtr &,
+    const hector_worldmodel_msgs::srv::GetConfirmedObjects::Response::SharedPtr &response ) const
+{
+  for ( const auto &[class_name, clusterer] : clusterers_ ) {
+    for ( auto &confirmed_object : clusterer->getConfirmedObjects() ) {
       geometry_msgs::msg::PointStamped position;
       position.header = confirmed_object.header_;
       position.point.x = confirmed_object.pose_.translation().x();
       position.point.y = confirmed_object.pose_.translation().y();
       position.point.z = confirmed_object.pose_.translation().z();
 
-      response->class_names.push_back( cluster_entry.first );
+      response->class_names.push_back( class_name );
       response->positions.push_back( position );
+      response->detection_times.push_back( confirmed_object.getConfirmationTime() );
+
+      // Compute the autonomy mode that was active at confirmation time
+      auto &mode = confirmed_object.getOperationMode();
+      if ( !mode.has_value() ) {
+        mode = getAutonomyModeAtTime( confirmed_object.getConfirmationTime() );
+      }
+      response->operation_modes.push_back( mode.value() );
     }
   }
 }
-
 } // namespace hector_world_model
 
 int main( int argc, char *argv[] )
 {
   rclcpp::init( argc, argv );
-  auto node = std::make_shared<hector_world_model::WorldModel>();
+  const auto node = std::make_shared<hector_world_model::WorldModel>();
 
   rclcpp::executors::MultiThreadedExecutor executor;
   executor.add_node( node );
