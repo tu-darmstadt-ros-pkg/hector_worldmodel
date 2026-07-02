@@ -110,7 +110,7 @@ void WorldModel::setup()
 
   clustering_timer_ = this->create_timer(
       std::chrono::seconds( 2 ), [this]() { timerCb(); }, clustering_timer_group_ );
-  // clustering_timer_->cancel();
+  clustering_timer_->reset();
 }
 
 void WorldModel::setupNewClustererIfNeeded( const std::string &class_name )
@@ -137,6 +137,8 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
         this->create_client<image_projection_msgs::srv::ProjectPixelTo3DRay>(
             service_name, rclcpp::QoS( 10 ), detection_cb_group_ );
   }
+
+  RCLCPP_INFO( this->get_logger(), "Got Detection" );
 
   const auto ray_projection_client = ray_projection_clients_[msg.header.frame_id];
 
@@ -208,12 +210,16 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
                 detected_obj->direction_ = detected_obj->pose_.translation().normalized();
                 detected_obj->distance_ = result->distance;
 
-                detected_obj->projection_support_ = ( 1.0 - exp( -1.0 / ( result->distance ) ) );
+                detected_obj->projection_support_ =
+                    1; //( 1.0 - exp( -1.0 / ( result->distance ) ) );
                 detected_obj->calculateConfidence();
 
                 setupNewClustererIfNeeded( detected_obj->class_name_ );
 
                 clusterers_.at( detected_obj->class_name_ )->addDetection( detected_obj );
+                RCLCPP_INFO( this->get_logger(), "Add 3D Detection at (%0.3f, %0.3f, %0.3f,) ",
+                             result->end_point.point.x, result->end_point.point.y,
+                             result->end_point.point.z );
 
                 pub3DDetection( *detected_obj );
               } );

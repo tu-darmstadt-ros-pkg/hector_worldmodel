@@ -1,4 +1,4 @@
 /**:
   ros__parameters:
-    image_projection_service_front: "front_wideangle/image_projection_pinhole/project_pixel_to_ray"
-    image_projection_service_back: "back_wideangle/image_projection_pinhole/project_pixel_to_ray"
+    image_projection_service_front: "image_projection_pinhole_front/project_pixel_to_ray"
+    image_projection_service_back: "image_projection_pinhole_back/project_pixel_to_ray"

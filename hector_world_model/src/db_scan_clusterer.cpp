@@ -35,6 +35,8 @@ void DBScanClusterer::fit()
 
 void DBScanClusterer::processNewDetections()
 {
+
+  RCLCPP_INFO( node_.lock()->get_logger(), "Run Cluster" );
   detection_queue_mutex_.lock();
   std::vector<ObjectDetection> new_detections = detection_queue_;
   detection_queue_.clear();
@@ -98,7 +100,7 @@ void DBScanClusterer::processClusteringResults()
     candidate.pose_.translation() = pos / confidence_sum;
     candidate.aggregated_confidence_ = 1.0 / ( 1 + exp( -confidence_sum ) );
     candidate.class_name_ = class_name;
-    candidate.header_.frame_id = "world";
+    candidate.header_.frame_id = "map";
     candidate.header_.stamp = earliest_stamp;
     RCLCPP_INFO( node_.lock()->get_logger(), "Cluster %zu: Center at (%f, %f, %f) with confidence %f",
                  i, candidate.pose_.translation().x(), candidate.pose_.translation().y(),

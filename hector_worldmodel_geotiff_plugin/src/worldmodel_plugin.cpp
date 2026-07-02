@@ -58,7 +58,7 @@ void WorldmodelPlugin::reset()
 void WorldmodelPlugin::draw(
     const std::shared_ptr<hector_geotiff_plugin_interface::GeotiffWriterInterface> geotiff_writer )
 {
-  RCLCPP_DEBUG_STREAM( node_->get_logger(), "Drawing Plugin: " << getPluginName() );
+  RCLCPP_INFO_STREAM( node_->get_logger(), "Drawing Plugin: " << getPluginName() );
   geotiff_ = geotiff_writer;
   auto qp = QPainter( &geotiff_->getImage() );
 
@@ -70,6 +70,7 @@ void WorldmodelPlugin::draw(
   if ( !latest_object_list_.empty() ) {
     writeToTextfile();
   }
+  RCLCPP_INFO_STREAM( node_->get_logger(), "Drawn Plugin: " << getPluginName() );
 }
 
 void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
@@ -89,7 +90,6 @@ void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
                                     true );
     return;
   }
-  RCLCPP_WARN( node_->get_logger(), "Unknown class name: %s", class_name.c_str() );
 }
 
 std::string

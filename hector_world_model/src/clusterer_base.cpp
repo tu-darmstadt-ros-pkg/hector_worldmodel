@@ -151,7 +151,7 @@ void hector_world_model::DetectionClusterer::pubPointMarker(
 
   // Create a marker message to visualize the cluster
   visualization_msgs::msg::Marker marker;
-  marker.header.frame_id = "world";
+  marker.header.frame_id = "map";
   marker.header.stamp = rclcpp::Clock().now();
   // marker.ns = marker_ns_;
   marker.id = marker_id; // Unique ID for the marker
