@@ -14,9 +14,13 @@ DBScanClusterer::DBScanClusterer( std::atomic<int> &latest_marker_id,
 
 void DBScanClusterer::fit()
 {
+  RCLCPP_INFO( node_.lock()->get_logger(), "Attempt fit" );
+  new_detections_received_ = true;
   if ( !new_detections_received_ )
     return;
   new_detections_received_ = false;
+
+  RCLCPP_INFO( node_.lock()->get_logger(), "Fitting in progess" );
 
   // Write back results to object candidates and new detection assignments
   // writeClusteringResults( assignments, center_confidences, centers );
@@ -53,11 +57,13 @@ void DBScanClusterer::processNewDetections()
       }
 
     } else {
+      RCLCPP_INFO( node_.lock()->get_logger(), "Non redundant-detection" );
       object_detections_.insert( object_detections_.begin(), detection );
       pubVisualization( object_detections_.front(), true, false );
       new_detections_received_ = true;
     }
   }
+  new_detections_received_ = true;
 
   RCLCPP_INFO( node_.lock()->get_logger(), "Current amount of detections: %lu",
                object_detections_.size() );

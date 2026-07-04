@@ -20,8 +20,8 @@ WorldModel::~WorldModel()
 
 void WorldModel::declareParameters()
 {
-  this->declare_parameter( "distance_threshold", 0.4 );
-  this->declare_parameter( "confirmation_confidence_threshold", 0.85 );
+  this->declare_parameter( "distance_threshold", 0.2 );
+  this->declare_parameter( "confirmation_confidence_threshold", 0.0 );
   this->declare_parameter( "initial_center_confidence_threshold", 0.6 );
   this->declare_parameter( "max_clustering_iterations", 8 );
 
@@ -315,6 +315,8 @@ void WorldModel::getConfirmedObjectsCb(
     const hector_worldmodel_msgs::srv::GetConfirmedObjects::Response::SharedPtr &response ) const
 {
   for ( const auto &[class_name, clusterer] : clusterers_ ) {
+
+    std::lock_guard<std::mutex> lock( clusterer->confirmed_objects_mutex_ );
     for ( auto &confirmed_object : clusterer->getConfirmedObjects() ) {
       geometry_msgs::msg::PointStamped position;
       position.header = confirmed_object.header_;
