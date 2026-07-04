@@ -9,6 +9,7 @@
 #include <hector_worldmodel_msgs/srv/get_confirmed_objects.hpp>
 #include <iostream>
 #include <rclcpp/time.hpp>
+#include <set>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -29,12 +30,26 @@ public:
   void draw( std::shared_ptr<hector_geotiff_plugin_interface::GeotiffWriterInterface> geotiff_writer )
       override;
   void drawTypeDependent( const std::string &class_name, const Eigen::Vector2i &geo_coords,
-                          QPainter &qp );
+                          QPainter &qp, int id );
 
   void reset() override;
 
 private:
   void writeToTextfile();
+
+  /**
+   * @brief Draws a legend in the strip appended to the right of the map, listing one
+   * swatch + class name per entry, keyed by the same id drawn on the corresponding
+   * marker on the map.
+   *
+   * @param qp QPainter to draw with.
+   * @param origin Top-left pixel coordinates (in plain image pixel space) of the appended strip.
+   * @param entries Ordered list of (id, class_name) pairs to list, one per row.
+   */
+  void drawLegend( QPainter &qp, const Eigen::Vector2i &origin,
+                   const std::vector<std::pair<int, std::string>> &entries );
+
+  QColor getClassColor( const std::string &class_name ) const;
 
   static std::string autonomyModeToString( const autonomy_manager_msgs::msg::AutonomyMode &mode );
 

@@ -1,5 +1,7 @@
 #include <QBrush>
+#include <QFontMetrics>
 #include <QPainter>
+#include <cmath>
 #include <hector_math/helpers/coloring.h>
 #include <hector_worldmodel_geotiff_plugin/worldmodel_plugin.hpp>
 #include <iomanip>
@@ -61,35 +63,106 @@ void WorldmodelPlugin::draw(
 {
   RCLCPP_INFO_STREAM( node_->get_logger(), "Drawing Plugin: " << getPluginName() );
   geotiff_ = geotiff_writer;
-  auto qp = QPainter( &geotiff_->getImage() );
 
   std::lock_guard<std::mutex> lock( mutex_ );
+
+  // Assign each object the same id used to label its marker on the map, its legend row,
+  // and its row in the exported CSV (see writeToTextfile), so all three can be cross-referenced.
+  std::vector<std::pair<int, std::string>> legend_entries;
+  legend_entries.reserve( latest_object_list_.size() );
+  int next_id = 0;
+  for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
+    legend_entries.emplace_back( next_id++, class_name );
+  }
+
+  const Eigen::Vector2i legend_origin( geotiff_->getImage().width(), 0 );
+  if ( !legend_entries.empty() ) {
+    const float pixels_per_meter = geotiff_->getPixelsPerGeotiffMeter();
+    geotiff_->setFont( 6 );
+    const QFontMetrics font_metrics( geotiff_->getMapDrawFont() );
+    int max_text_width = 0;
+    for ( const auto &[id, class_name] : legend_entries ) {
+      max_text_width = std::max(
+          max_text_width, font_metrics.horizontalAdvance( QString::fromStdString( class_name ) ) );
+    }
+    const int margin = static_cast<int>( pixels_per_meter * 0.2f );
+    const int swatch_size = static_cast<int>( pixels_per_meter * 0.5f );
+    const int legend_width_px = 3 * margin + swatch_size + max_text_width;
+    const int legend_width_m =
+        std::max( 1, static_cast<int>( std::ceil( legend_width_px / pixels_per_meter ) ) );
+    geotiff_->extendImage( hector_geotiff_plugin_interface::Direction::RIGHT, legend_width_m,
+                           geotiff_->getImage() );
+  }
+
+  auto qp = QPainter( &geotiff_->getImage() );
+  int id = 0;
   for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
     const auto coords = Eigen::Vector2f{ point.point.x, point.point.y };
     Eigen::Vector2i geo_coords = geotiff_->transformWorldToGeoCoords( coords );
     qp.save();
-    drawTypeDependent( class_name, geo_coords, qp );
+    drawTypeDependent( class_name, geo_coords, qp, id++ );
     qp.restore();
   }
+
+  if ( !legend_entries.empty() ) {
+    drawLegend( qp, legend_origin, legend_entries );
+  }
+
   if ( !latest_object_list_.empty() ) {
     writeToTextfile();
   }
   RCLCPP_INFO_STREAM( node_->get_logger(), "Drawn Plugin: " << getPluginName() );
 }
 
-void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
-                                          const Eigen::Vector2i &geo_coords, QPainter &qp )
+QColor WorldmodelPlugin::getClassColor( const std::string &class_name ) const
 {
   if ( hazmat_classes_.find( class_name ) != hazmat_classes_.end() ) {
-    geotiff_->drawObjectOfInterest( qp, geo_coords, class_name.substr( 0, 2 ), { 255, 100, 30 },
-                                    { 255, 255, 255 }, Eigen::Vector2f( 1.0f, 1.0f ),
-                                    hector_geotiff_plugin_interface::Shape::SHAPE_DIAMOND, true,
-                                    true );
-    return;
+    return { 255, 100, 30 };
   }
-  geotiff_->drawObjectOfInterest( qp, geo_coords, class_name.substr( 0, 2 ), { 240, 10, 10 },
+  return { 240, 10, 10 };
+}
+
+void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
+                                          const Eigen::Vector2i &geo_coords, QPainter &qp, int id )
+{
+  geotiff_->drawObjectOfInterest( qp, geo_coords, std::to_string( id ), getClassColor( class_name ),
                                   { 255, 255, 255 }, Eigen::Vector2f( 1.0f, 1.0f ),
                                   hector_geotiff_plugin_interface::Shape::SHAPE_DIAMOND, true, true );
+}
+
+void WorldmodelPlugin::drawLegend( QPainter &qp, const Eigen::Vector2i &origin,
+                                   const std::vector<std::pair<int, std::string>> &entries )
+{
+  const float pixels_per_meter = geotiff_->getPixelsPerGeotiffMeter();
+  const int margin = static_cast<int>( pixels_per_meter * 0.2f );
+  const int row_height = static_cast<int>( pixels_per_meter * 0.5f );
+
+  qp.save();
+  geotiff_->setFont( 6 );
+  qp.setFont( geotiff_->getMapDrawFont() );
+  qp.setPen( QColor( 0, 0, 0 ) );
+  qp.drawText( origin.x() + margin, origin.y() + row_height, "Legend" );
+
+  int row = 1;
+  for ( const auto &[id, class_name] : entries ) {
+    const Eigen::Vector2i swatch_center( origin.x() + margin + row_height / 2,
+                                         origin.y() + ( row + 1 ) * row_height );
+    qp.save();
+    geotiff_->drawObjectOfInterest(
+        qp, swatch_center, std::to_string( id ), getClassColor( class_name ), { 255, 255, 255 },
+        Eigen::Vector2f( 1.0f, 1.0f ), hector_geotiff_plugin_interface::Shape::SHAPE_DIAMOND, true,
+        false );
+    qp.restore();
+
+    geotiff_->setFont( 6 );
+    qp.setFont( geotiff_->getMapDrawFont() );
+    qp.setPen( QColor( 0, 0, 0 ) );
+    qp.drawText( origin.x() + 2 * margin + row_height,
+                 origin.y() + ( row + 1 ) * row_height + row_height / 4,
+                 QString::fromStdString( class_name ) );
+    ++row;
+  }
+  qp.restore();
 }
 
 std::string
