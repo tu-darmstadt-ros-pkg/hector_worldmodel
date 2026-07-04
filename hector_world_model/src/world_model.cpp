@@ -204,6 +204,14 @@ void WorldModel::detectionCb( const hector_perception_msgs::msg::ObjectDetection
                       response ) {
                 auto result = response.get();
 
+                if ( result->distance <= 0.0 || std::isnan( result->distance ) ||
+                     std::isinf( result->distance ) ) {
+                  RCLCPP_WARN( this->get_logger(),
+                               "Distance to obstacle service returned invalid distance, skipping "
+                               "detection." );
+                  return;
+                }
+
                 detected_obj->pose_.translation() =
                     Eigen::Vector3d( result->end_point.point.x, result->end_point.point.y,
                                      result->end_point.point.z );
@@ -316,7 +324,6 @@ void WorldModel::getConfirmedObjectsCb(
 {
   for ( const auto &[class_name, clusterer] : clusterers_ ) {
 
-    std::lock_guard<std::mutex> lock( clusterer->confirmed_objects_mutex_ );
     for ( auto &confirmed_object : clusterer->getConfirmedObjects() ) {
       geometry_msgs::msg::PointStamped position;
       position.header = confirmed_object.header_;
