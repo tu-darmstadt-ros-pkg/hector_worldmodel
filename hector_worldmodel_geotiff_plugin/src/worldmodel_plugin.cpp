@@ -29,6 +29,7 @@ void WorldmodelPlugin::initialize( const rclcpp::Node::SharedPtr &node )
               [this]( rclcpp::Client<hector_worldmodel_msgs::srv::GetConfirmedObjects>::SharedFuture
                           response ) {
                 const auto &result = response.get();
+                std::lock_guard<std::mutex> lock( mutex_ );
                 latest_object_list_.clear();
                 for ( size_t i = 0; i < result->class_names.size(); i++ ) {
                   const auto &class_name = result->class_names.at( i );
@@ -62,10 +63,13 @@ void WorldmodelPlugin::draw(
   geotiff_ = geotiff_writer;
   auto qp = QPainter( &geotiff_->getImage() );
 
+  std::lock_guard<std::mutex> lock( mutex_ );
   for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
     const auto coords = Eigen::Vector2f{ point.point.x, point.point.y };
     Eigen::Vector2i geo_coords = geotiff_->transformWorldToGeoCoords( coords );
+    qp.save();
     drawTypeDependent( class_name, geo_coords, qp );
+    qp.restore();
   }
   if ( !latest_object_list_.empty() ) {
     writeToTextfile();
@@ -83,13 +87,9 @@ void WorldmodelPlugin::drawTypeDependent( const std::string &class_name,
                                     true );
     return;
   }
-  if ( object_classes_.find( class_name ) != object_classes_.end() ) {
-    geotiff_->drawObjectOfInterest( qp, geo_coords, class_name.substr( 0, 2 ), { 240, 10, 10 },
-                                    { 255, 255, 255 }, Eigen::Vector2f( 1.0f, 1.0f ),
-                                    hector_geotiff_plugin_interface::Shape::SHAPE_DIAMOND, true,
-                                    true );
-    return;
-  }
+  geotiff_->drawObjectOfInterest( qp, geo_coords, class_name.substr( 0, 2 ), { 240, 10, 10 },
+                                  { 255, 255, 255 }, Eigen::Vector2f( 1.0f, 1.0f ),
+                                  hector_geotiff_plugin_interface::Shape::SHAPE_DIAMOND, true, true );
 }
 
 std::string

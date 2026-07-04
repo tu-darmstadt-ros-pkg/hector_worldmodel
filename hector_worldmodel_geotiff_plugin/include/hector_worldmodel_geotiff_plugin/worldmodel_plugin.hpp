@@ -49,7 +49,6 @@ private:
       latest_object_list_;
 
   std::set<std::string> hazmat_classes_;
-  std::set<std::string> object_classes_;
 
   std::mutex mutex_;
 };
