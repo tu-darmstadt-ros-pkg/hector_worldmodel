@@ -28,16 +28,22 @@ void WorldmodelPlugin::initialize( const rclcpp::Node::SharedPtr &node )
               request,
               [this]( rclcpp::Client<hector_worldmodel_msgs::srv::GetConfirmedObjects>::SharedFuture
                           response ) {
-                const auto &result = response.get();
-                latest_object_list_.clear();
-                for ( size_t i = 0; i < result->class_names.size(); i++ ) {
-                  const auto &class_name = result->class_names.at( i );
-                  const auto &position = result->positions.at( i );
-                  const auto &detection_time = result->detection_times.at( i );
-                  const auto &operation_mode = result->operation_modes.at( i );
+                try {
+                  const auto &result = response.get();
+                  std::lock_guard<std::mutex> lock( mutex_ );
+                  latest_object_list_.clear();
+                  for ( size_t i = 0; i < result->class_names.size(); i++ ) {
+                    const auto &class_name = result->class_names.at( i );
+                    const auto &position = result->positions.at( i );
+                    const auto &detection_time = result->detection_times.at( i );
+                    const auto &operation_mode = result->operation_modes.at( i );
 
-                  latest_object_list_.emplace_back( class_name, position, detection_time,
-                                                    operation_mode );
+                    latest_object_list_.emplace_back( class_name, position, detection_time,
+                                                      operation_mode );
+                  }
+                } catch ( const std::exception &e ) {
+                  RCLCPP_WARN( node_->get_logger(),
+                               "Error while processing confirmed objects response: %s", e.what() );
                 }
               } );
         } catch ( const std::exception &e ) {
@@ -62,6 +68,7 @@ void WorldmodelPlugin::draw(
   geotiff_ = geotiff_writer;
   auto qp = QPainter( &geotiff_->getImage() );
 
+  std::lock_guard<std::mutex> lock( mutex_ );
   for ( const auto &[class_name, point, detection_time, operation_mode] : latest_object_list_ ) {
     const auto coords = Eigen::Vector2f{ point.point.x, point.point.y };
     Eigen::Vector2i geo_coords = geotiff_->transformWorldToGeoCoords( coords );
@@ -125,6 +132,7 @@ WorldmodelPlugin::autonomyModeToString( const autonomy_manager_msgs::msg::Autono
   }
 }
 
+// Assumes mutex_ is already held by the caller (draw()); does not lock it itself.
 void WorldmodelPlugin::writeToTextfile()
 {
   auto exporter = geotiff_->getExporter();
