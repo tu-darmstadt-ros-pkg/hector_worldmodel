@@ -21,15 +21,15 @@ WorldModel::~WorldModel()
 void WorldModel::declareParameters()
 {
   this->declare_parameter( "distance_threshold", 0.2 );
-  this->declare_parameter( "confirmation_confidence_threshold", 0.0 );
-  this->declare_parameter( "initial_center_confidence_threshold", 0.6 );
+  this->declare_parameter( "confirmation_confidence_threshold", 0.5 );
+  this->declare_parameter( "initial_center_confidence_threshold", 0.5 );
   this->declare_parameter( "max_clustering_iterations", 8 );
 
   this->declare_parameter( "redundancy_endpoint_distance_threshold", 0.05 );
   this->declare_parameter( "redundancy_endpoint_angle_threshold", 10.0 );
-  this->declare_parameter( "redundancy_distance_threshold", 0.2 );
+  this->declare_parameter( "redundancy_distance_threshold", 0.1 );
 
-  this->declare_parameter( "min_neighbours", 3 );
+  this->declare_parameter( "min_neighbours", 2 );
   this->declare_parameter( "epsilon", 0.1 );
 
   this->declare_parameter( "use_bag_detections", false );
