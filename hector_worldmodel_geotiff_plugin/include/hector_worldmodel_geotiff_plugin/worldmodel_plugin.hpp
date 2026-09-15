@@ -1,8 +1,7 @@
 #ifndef HECTOR_GEOTIFF_WORLDMODEL_PLUGIN_HPP
 #define HECTOR_GEOTIFF_WORLDMODEL_PLUGIN_HPP
 
-#include <autonomy_manager_msgs/autonomy_manager_msgs/msg/autonomy_mode.h>
-#include <autonomy_manager_msgs/autonomy_manager_msgs/msg/detail/autonomy_mode__struct.hpp>
+#include <autonomy_manager_msgs/msg/autonomy_mode.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 #include <fstream>
 #include <hector_geotiff_plugin_interface/geotiff_plugin_interface.hpp>
