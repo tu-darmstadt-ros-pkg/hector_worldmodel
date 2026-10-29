@@ -30,7 +30,7 @@ set(DEPENDENCIES
     tf2_eigen)
 
 find_package(
-  Qt5
+  Qt6
   COMPONENTS Widgets
   REQUIRED)
 
@@ -38,7 +38,7 @@ foreach(dependency IN LISTS DEPENDENCIES)
   find_package(${dependency} REQUIRED)
 endforeach()
 
-include_directories(${EIGEN3_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS})
+include_directories(${EIGEN3_INCLUDE_DIRS})
 
 set(HEADERS include/hector_worldmodel_geotiff_plugin/worldmodel_plugin.hpp)
 
@@ -52,7 +52,7 @@ target_include_directories(
 
 target_link_libraries(
   ${PROJECT_NAME}
-  PUBLIC Qt5::Widgets
+  PUBLIC Qt6::Widgets
          rclcpp::rclcpp
          pluginlib::pluginlib
          tf2::tf2
@@ -93,6 +93,6 @@ pluginlib_export_plugin_description_file(hector_worldmodel_geotiff_plugin
 
 ament_export_targets(${PROJECT_NAME}-targets)
 ament_export_include_directories(include)
-ament_export_dependencies(${DEPENDENCIES})
+ament_export_dependencies(${DEPENDENCIES} Qt6Widgets)
 
 ament_package()
