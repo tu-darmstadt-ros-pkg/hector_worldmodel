@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(hector_worldmodel_geotiff_plugin)
 
 # Default to C++17
@@ -50,9 +50,30 @@ target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                          $<INSTALL_INTERFACE:include>)
 
-ament_target_dependencies(${PROJECT_NAME} PUBLIC ${DEPENDENCIES})
+target_link_libraries(
+  ${PROJECT_NAME}
+  PUBLIC Qt5::Widgets
+         rclcpp::rclcpp
+         pluginlib::pluginlib
+         tf2::tf2
+         tf2_ros::tf2_ros
+         tf2_eigen::tf2_eigen
+         tf2_geometry_msgs::tf2_geometry_msgs
+         hector_ros2_utils::hector_ros2_utils
+         ${autonomy_manager_msgs_TARGETS}
+         ${hector_worldmodel_msgs_TARGETS}
+         ${rcl_interfaces_TARGETS})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Widgets)
+# Packages whose exported target names are not verified here: fall back to
+# include dirs / libraries if the namespaced target does not exist.
+foreach(pkg hector_math hector_geotiff_plugin_interface)
+  if(TARGET ${pkg}::${pkg})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${pkg}::${pkg})
+  else()
+    target_include_directories(${PROJECT_NAME} PUBLIC ${${pkg}_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${${pkg}_LIBRARIES})
+  endif()
+endforeach()
 
 install(
   TARGETS ${PROJECT_NAME}

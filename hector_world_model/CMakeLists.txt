@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(hector_world_model)
 
 # Default to C++17
@@ -28,24 +28,19 @@ target_include_directories(
   world_model PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                      $<INSTALL_INTERFACE:include>)
 
-target_include_directories(
-  world_model
-  PUBLIC clustering/clusterer_base.hpp clustering/k_means_clusterer.hpp
-         clustering/db_scan_clusterer.hpp hector_world_model/object.hpp)
+target_include_directories(world_model PUBLIC ${OpenCV_INCLUDE_DIRS})
 
-target_link_libraries(world_model Eigen3::Eigen)
-
-ament_target_dependencies(
+target_link_libraries(
   world_model
-  rclcpp
-  std_msgs
-  Eigen3
-  OpenCV
-  hector_worldmodel_msgs
-  hector_perception_msgs
-  image_projection_msgs
-  std_srvs
-  visualization_msgs)
+  PUBLIC Eigen3::Eigen
+         ${OpenCV_LIBS}
+         rclcpp::rclcpp
+         ${std_msgs_TARGETS}
+         ${std_srvs_TARGETS}
+         ${visualization_msgs_TARGETS}
+         ${hector_worldmodel_msgs_TARGETS}
+         ${hector_perception_msgs_TARGETS}
+         ${image_projection_msgs_TARGETS})
 
 install(TARGETS world_model DESTINATION lib/${PROJECT_NAME})
 
